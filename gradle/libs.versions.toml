@@ -13,12 +13,13 @@ androidxMaterialIcons = "1.7.6"
 androidxDataStore = "1.1.2"
 androidxNavigation = "2.8.5"
 androidxPaging = "3.3.5"
-kotlinxCoroutines = "1.10.0"
+kotlinxCoroutines = "1.10.1"
+kotlinxDatetime = "0.6.1"
 ksp = "2.1.0-1.0.29"
-ktor = "3.0.0"
-coil = "3.0.0-rc01"
-room = "2.6.1"
-koin = "4.0.0"
+ktor = "3.0.3"
+coil = "3.0.4"
+room = "2.7.0-alpha12"
+koin = "4.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +43,7 @@ coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref 
 coil-network-ktor = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil" }
 coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
 ktor-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktor" }
 ktor-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
 ktor-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
@@ -49,6 +51,7 @@ ktor-serialization-json = { group = "io.ktor", name = "ktor-serialization-kotlin
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 koin-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin" }
 koin-compose-navigation = { group = "io.insert-koin", name = "koin-androidx-compose-navigation", version.ref = "koin" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

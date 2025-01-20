@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">MoviesDiscovery</string>
+    <string name="share_movie_intent_title">Share movie</string>
 </resources>

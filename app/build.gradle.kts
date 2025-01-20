@@ -9,6 +9,8 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val TMDB_API_KEY: String by project
+
 android {
     namespace = "com.example.moviesdiscovery"
     compileSdk = 35
@@ -21,6 +23,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "TMDB_API_KEY", "\"$TMDB_API_KEY\"")
     }
 
     buildTypes {
@@ -42,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -76,8 +80,10 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.room.paging)
     ksp(libs.room.compiler)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.datetime)
     implementation(libs.koin.compose)
     implementation(libs.koin.compose.navigation)
     implementation(libs.coil.compose)
