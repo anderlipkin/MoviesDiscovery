@@ -10,6 +10,7 @@ private const val SORT_BY_PARAMETER = "sort_by"
 private const val SORT_ORDER_ASC = "asc"
 private const val SORT_ORDER_DESC = "desc"
 private const val PRIMARY_RELEASE_DATE_SORT_BY = "primary_release_date"
+private const val VOTE_AVERAGE_SORT_BY = "vote_average"
 
 fun MovieSortBy.toApiQueryValue(): String {
     val apiSortOrder = when (sortOrder) {
@@ -19,6 +20,9 @@ fun MovieSortBy.toApiQueryValue(): String {
     return when (this) {
         is MovieSortBy.PrimaryReleaseDate ->
             "$PRIMARY_RELEASE_DATE_SORT_BY.$apiSortOrder"
+
+        is MovieSortBy.VoteAverage ->
+            "$VOTE_AVERAGE_SORT_BY.$apiSortOrder"
     }
 }
 
@@ -30,7 +34,7 @@ fun MovieQuery.toApiParameters() =
         voteCountMin?.let {
             append(VOTE_COUNT_GTE_PARAMETER, it.toString())
         }
-        sortBy?.let {
+        sortByList.firstOrNull()?.let {
             append(SORT_BY_PARAMETER, it.toApiQueryValue())
         }
     }

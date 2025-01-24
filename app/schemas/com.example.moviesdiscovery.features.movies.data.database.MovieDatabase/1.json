@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "33111c2887b8d43af89c5aabf3f483a1",
+    "identityHash": "12857e339dc69f05332136089889d7bf",
     "entities": [
       {
         "tableName": "movies",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `title` TEXT NOT NULL, `overview` TEXT NOT NULL, `vote_average` TEXT NOT NULL, `poster_path` TEXT NOT NULL, `release_date` INTEGER NOT NULL, `favorite` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `title` TEXT NOT NULL, `overview` TEXT NOT NULL, `vote_average` REAL NOT NULL, `poster_path` TEXT NOT NULL, `release_date` INTEGER NOT NULL, `favorite` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -29,7 +29,7 @@
           {
             "fieldPath": "voteAverage",
             "columnName": "vote_average",
-            "affinity": "TEXT",
+            "affinity": "REAL",
             "notNull": true
           },
           {
@@ -60,7 +60,7 @@
       },
       {
         "tableName": "favorite_movies",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `title` TEXT NOT NULL, `overview` TEXT NOT NULL, `vote_average` TEXT NOT NULL, `poster_path` TEXT NOT NULL, `release_date` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `title` TEXT NOT NULL, `overview` TEXT NOT NULL, `vote_average` REAL NOT NULL, `poster_path` TEXT NOT NULL, `release_date` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -83,7 +83,7 @@
           {
             "fieldPath": "voteAverage",
             "columnName": "vote_average",
-            "affinity": "TEXT",
+            "affinity": "REAL",
             "notNull": true
           },
           {
@@ -132,7 +132,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '33111c2887b8d43af89c5aabf3f483a1')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '12857e339dc69f05332136089889d7bf')"
     ]
   }
 }

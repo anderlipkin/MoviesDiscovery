@@ -1,6 +1,7 @@
 package com.example.moviesdiscovery.features.movies.di
 
 import androidx.room.Room
+import com.example.moviesdiscovery.core.data.di.coreDataModule
 import com.example.moviesdiscovery.core.network.di.coreNetworkModule
 import com.example.moviesdiscovery.features.movies.data.MovieRepository
 import com.example.moviesdiscovery.features.movies.data.database.MovieDatabase
@@ -30,7 +31,7 @@ private val databaseModule = module {
 }
 
 private val dataModule = module {
-    includes(databaseModule, coreNetworkModule)
+    includes(databaseModule, coreNetworkModule, coreDataModule)
     singleOf(::MovieApiService)
     singleOf(::MovieRepository)
 }

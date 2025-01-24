@@ -6,7 +6,6 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.room.withTransaction
 import com.example.moviesdiscovery.features.movies.data.database.MovieDatabase
-import com.example.moviesdiscovery.features.movies.data.database.asRoomRawQuery
 import com.example.moviesdiscovery.features.movies.data.database.dao.FavoriteMovieDao
 import com.example.moviesdiscovery.features.movies.data.database.dao.MovieDao
 import com.example.moviesdiscovery.features.movies.data.database.dao.MovieRemoteKeyDao
@@ -17,8 +16,6 @@ import com.example.moviesdiscovery.features.movies.data.dto.MovieDto
 import com.example.moviesdiscovery.features.movies.data.dto.MovieResponseDto
 import com.example.moviesdiscovery.features.movies.domain.MovieQuery
 import io.ktor.http.formUrlEncode
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.getAndUpdate
 
 private const val INITIAL_PAGE = 1
 
@@ -37,8 +34,6 @@ class MovieRemoteMediator(
 
     private val remoteKeyDao: MovieRemoteKeyDao
         get() = movieDatabase.remoteKeyDao()
-
-    private val isInitialized = MutableStateFlow(false)
 
     override suspend fun load(
         loadType: LoadType,
@@ -62,21 +57,7 @@ class MovieRemoteMediator(
         movieDatabase.withTransaction {
             val queryRaw = query.toApiParameters().formUrlEncode()
             if (loadType == LoadType.REFRESH) {
-                moviesApiResult
-                    .onSuccess {
-                        moviesDao.clearAll()
-                        remoteKeyDao.deleteByQuery(queryRaw)
-                    }
-                    .onFailure {
-                        if (isInitialized.getAndUpdate { true }) {
-                            // show Error on UI
-                        } else {
-                            val latestMovies =
-                                moviesDao.getMoviesByQuery(query.asRoomRawQuery()).take(10)
-                            moviesDao.clearAll()
-                            moviesDao.insertAll(latestMovies)
-                        }
-                    }
+                moviesApiResult.onSuccess { moviesDao.clearAll() }
             }
             moviesApiResult.onSuccess { movieResponseDto ->
                 val nextRemoteKey = MovieRemoteKeyEntity(
@@ -84,13 +65,13 @@ class MovieRemoteMediator(
                     nextPage = if (movieResponseDto.results.isEmpty()) null else nextPage + 1
                 )
                 remoteKeyDao.insert(nextRemoteKey)
-                insertMovies(movieResponseDto.results)
+                saveMovies(movieResponseDto.results)
             }
         }
         return moviesApiResult.asMediatorResult()
     }
 
-    private suspend fun insertMovies(remoteMovies: List<MovieDto>) {
+    private suspend fun saveMovies(remoteMovies: List<MovieDto>) {
         val favoriteMovieIds = favoriteMovieDao.getMovieIds().toSet()
         val moviesEntity = remoteMovies.map { remoteMovie ->
             remoteMovie.asEntity(favorite = remoteMovie.id in favoriteMovieIds)

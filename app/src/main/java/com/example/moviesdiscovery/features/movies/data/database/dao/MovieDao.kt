@@ -1,13 +1,11 @@
 package com.example.moviesdiscovery.features.movies.data.database.dao
 
-import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.RawQuery
-import androidx.room.RoomRawQuery
 import com.example.moviesdiscovery.features.movies.data.database.entity.MovieEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MovieDao {
@@ -20,11 +18,11 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE id = :id")
     suspend fun getMovieById(id: Int): MovieEntity?
 
-    @RawQuery(observedEntities = [MovieEntity::class])
-    fun getMoviesPagingSource(query: RoomRawQuery): PagingSource<Int, MovieEntity>
+    @Query("SELECT * FROM movies WHERE id = :id")
+    fun getMovieByIdFlow(id: Int): Flow<MovieEntity?>
 
-    @RawQuery
-    suspend fun getMoviesByQuery(query: RoomRawQuery): List<MovieEntity>
+    @Query("SELECT * FROM movies")
+    fun getMoviesByQueryFlow(): Flow<List<MovieEntity>>
 
     @Query("DELETE FROM movies")
     suspend fun clearAll()

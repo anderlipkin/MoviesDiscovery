@@ -12,7 +12,7 @@ data class FavoriteMovieEntity(
     val title: String,
     val overview: String,
     @ColumnInfo("vote_average")
-    val voteAverage: String,
+    val voteAverage: Float,
     @ColumnInfo("poster_path")
     val posterPath: String,
     @ColumnInfo("release_date")

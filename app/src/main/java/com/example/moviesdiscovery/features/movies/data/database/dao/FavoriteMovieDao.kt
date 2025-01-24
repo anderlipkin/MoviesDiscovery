@@ -21,6 +21,9 @@ interface FavoriteMovieDao {
     @Query("SELECT id FROM favorite_movies")
     suspend fun getMovieIds(): List<Int>
 
+    @Query("SELECT id FROM favorite_movies")
+    fun getMovieIdsFlow(): Flow<List<Int>>
+
     @Query("DELETE FROM favorite_movies WHERE id = :id")
     suspend fun deleteMovieById(id: Int)
 

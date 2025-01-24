@@ -1,5 +1,6 @@
 package com.example.moviesdiscovery.features.movies.data.dto
 
+import com.example.moviesdiscovery.features.movies.domain.Movie
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -19,9 +20,21 @@ data class MovieDto(
     @SerialName("overview")
     val overview: String,
     @SerialName("vote_average")
-    val voteAverage: String,
+    val voteAverage: Float,
     @SerialName("poster_path")
     val posterPath: String,
     @SerialName("release_date")
     val releaseDate: LocalDate
 )
+
+// TODO remove favorite
+fun MovieDto.asDomain(favorite: Boolean) =
+    Movie(
+        id = id,
+        title = title,
+        overview = overview,
+        voteAverage = voteAverage,
+        posterPath = posterPath,
+        releaseDate = releaseDate,
+        favorite = favorite
+    )

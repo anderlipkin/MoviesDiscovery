@@ -4,38 +4,26 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import com.example.moviesdiscovery.core.ui.SnackbarEventBus
+import com.example.moviesdiscovery.core.data.util.ConnectivityNetworkMonitor
 import com.example.moviesdiscovery.core.ui.theme.MoviesDiscoveryTheme
-import com.example.moviesdiscovery.features.movies.ui.list.MoviesScreen
-import org.koin.androidx.compose.KoinAndroidContext
+import com.example.moviesdiscovery.ui.MoviesDiscoveryApp
+import com.example.moviesdiscovery.ui.rememberMoviesAppState
+import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
+
+    private val networkMonitor: ConnectivityNetworkMonitor by inject(mode = LazyThreadSafetyMode.NONE)
+    private val snackbarEventBus: SnackbarEventBus by inject(mode = LazyThreadSafetyMode.NONE)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            val appState = rememberMoviesAppState(networkMonitor, snackbarEventBus)
             MoviesDiscoveryTheme {
-                MoviesDiscoveryApp()
+                MoviesDiscoveryApp(appState)
             }
-        }
-    }
-}
-
-@Composable
-fun MoviesDiscoveryApp(modifier: Modifier = Modifier) {
-    KoinAndroidContext {
-        Scaffold(modifier = modifier) { innerPadding ->
-            MoviesScreen(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .consumeWindowInsets(innerPadding)
-            )
         }
     }
 }
