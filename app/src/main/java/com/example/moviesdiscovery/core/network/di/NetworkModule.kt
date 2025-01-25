@@ -4,8 +4,8 @@ import coil3.ImageLoader
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.util.DebugLogger
 import com.example.moviesdiscovery.BuildConfig
-import com.example.moviesdiscovery.core.network.model.ApiErrorException
 import com.example.moviesdiscovery.core.network.dto.ApiErrorDto
+import com.example.moviesdiscovery.core.network.model.ApiErrorException
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO

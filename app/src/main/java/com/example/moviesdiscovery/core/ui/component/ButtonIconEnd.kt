@@ -19,7 +19,7 @@ fun ButtonIconEnd(
     iconContentDescription: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    iconTint: Color = LocalContentColor.current,
+    iconTint: Color? = null,
     text: @Composable () -> Unit,
 ) {
     Button(
@@ -37,7 +37,7 @@ fun ButtonIconEnd(
         Icon(
             painter = icon,
             contentDescription = iconContentDescription,
-            tint = iconTint,
+            tint = iconTint ?: LocalContentColor.current,
             modifier = Modifier.size(ButtonDefaults.IconSize)
         )
     }

@@ -18,19 +18,17 @@ data class MovieEntity(
     @ColumnInfo("poster_path")
     val posterPath: String,
     @ColumnInfo("release_date")
-    val releaseDate: LocalDate,
-    val favorite: Boolean
+    val releaseDate: LocalDate
 )
 
-fun MovieDto.asEntity(favorite: Boolean) =
+fun MovieDto.asEntity() =
     MovieEntity(
         id = id,
         title = title,
         overview = overview,
         voteAverage = voteAverage,
         posterPath = posterPath,
-        releaseDate = releaseDate,
-        favorite = favorite
+        releaseDate = releaseDate
     )
 
 fun MovieEntity.asDomain() =
@@ -41,5 +39,5 @@ fun MovieEntity.asDomain() =
         voteAverage = voteAverage,
         posterPath = posterPath,
         releaseDate = releaseDate,
-        favorite = favorite
+        favorite = false
     )

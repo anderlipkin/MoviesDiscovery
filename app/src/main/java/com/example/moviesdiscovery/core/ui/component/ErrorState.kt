@@ -14,7 +14,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.moviesdiscovery.R
 import com.example.moviesdiscovery.core.ui.theme.MoviesDiscoveryTheme
-import com.example.moviesdiscovery.features.movies.ui.list.RetryButton
 
 @Composable
 fun ErrorState(

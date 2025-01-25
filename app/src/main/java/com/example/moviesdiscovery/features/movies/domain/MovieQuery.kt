@@ -6,16 +6,16 @@ data class MovieQuery(
     val sortByList: List<MovieSortBy> = emptyList()
 )
 
-sealed interface MovieSortBy {
-    val sortOrder: SortOrder
+sealed class MovieSortBy {
+    abstract val sortOrder: SortOrder
 
     data class PrimaryReleaseDate(
         override val sortOrder: SortOrder
-    ) : MovieSortBy
+    ) : MovieSortBy()
 
     data class VoteAverage(
         override val sortOrder: SortOrder
-    ) : MovieSortBy
+    ) : MovieSortBy()
 
     enum class SortOrder {
         Asc, Desc

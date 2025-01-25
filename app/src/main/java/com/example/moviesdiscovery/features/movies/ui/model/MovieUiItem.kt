@@ -8,7 +8,7 @@ import java.util.Locale
 private const val IMAGE_W92_URL = "https://image.tmdb.org/t/p/w92"
 private const val VOTE_AVERAGE_LENGTH = 3
 
-sealed interface MovieUiItem {
+sealed class MovieUiItem {
     data class Movie(
         val id: Int,
         val title: String,
@@ -17,10 +17,13 @@ sealed interface MovieUiItem {
         val imageUrl: String,
         val isFavorite: Boolean,
         val monthAndYearRelease: String,
-    ) : MovieUiItem
+    ) : MovieUiItem()
 
-    data class DateSeparatorItem(val date: String) : MovieUiItem
+    data class DateSeparatorItem(val date: String) : MovieUiItem()
 }
+
+fun List<Movie>.asUiData(): List<MovieUiItem> =
+    map { it.asUiData() }.insertDateSeparators()
 
 fun Movie.asUiData() =
     MovieUiItem.Movie(

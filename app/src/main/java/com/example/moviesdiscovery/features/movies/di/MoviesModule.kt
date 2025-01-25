@@ -8,6 +8,7 @@ import com.example.moviesdiscovery.features.movies.data.database.MovieDatabase
 import com.example.moviesdiscovery.features.movies.data.database.dao.FavoriteMovieDao
 import com.example.moviesdiscovery.features.movies.data.database.dao.MovieDao
 import com.example.moviesdiscovery.features.movies.data.remote.MovieApiService
+import com.example.moviesdiscovery.features.movies.data.remote.MoviePagingDataSource
 import com.example.moviesdiscovery.features.movies.ui.list.MoviesViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.singleOf
@@ -34,6 +35,7 @@ private val dataModule = module {
     includes(databaseModule, coreNetworkModule, coreDataModule)
     singleOf(::MovieApiService)
     singleOf(::MovieRepository)
+    singleOf(::MoviePagingDataSource)
 }
 
 val moviesFeatureModule = module {

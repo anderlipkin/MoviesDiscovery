@@ -12,7 +12,6 @@ androidxMaterial3 = "1.3.1"
 androidxMaterialIcons = "1.7.6"
 androidxDataStore = "1.1.2"
 androidxNavigation = "2.8.5"
-androidxPaging = "3.3.5"
 kotlinxCoroutines = "1.10.1"
 kotlinxDatetime = "0.6.1"
 ksp = "2.1.0-1.0.29"
@@ -33,8 +32,6 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-compose-material-iconsExtended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "androidxMaterialIcons" }
 androidx-compose-ui-test = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
-androidx-paging = { group = "androidx.paging", name = "paging-runtime", version.ref = "androidxPaging" }
-androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "androidxPaging" }
 androidx-dataStore = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "androidxDataStore" }
 androidx-lifecycle-runtimeCompose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
 androidx-lifecycle-viewModelCompose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
@@ -51,7 +48,6 @@ ktor-serialization-json = { group = "io.ktor", name = "ktor-serialization-kotlin
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 koin-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin" }
 koin-compose-navigation = { group = "io.insert-koin", name = "koin-androidx-compose-navigation", version.ref = "koin" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

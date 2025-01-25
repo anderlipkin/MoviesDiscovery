@@ -18,8 +18,13 @@ class ConnectivityNetworkMonitor(
     private val context: Context,
     ioDispatcher: CoroutineDispatcher
 ) {
+
+    private val connectivityManager by lazy {
+        context.getSystemService<ConnectivityManager>()
+    }
+
     val isOnline: Flow<Boolean> = callbackFlow {
-        val connectivityManager = context.getSystemService<ConnectivityManager>()
+        val connectivityManager = connectivityManager
         if (connectivityManager == null) {
             channel.trySend(false)
             channel.close()
@@ -59,6 +64,8 @@ class ConnectivityNetworkMonitor(
     }
         .flowOn(ioDispatcher)
         .conflate()
+
+    fun isCurrentlyConnected() = connectivityManager?.isCurrentlyConnected() ?: false
 
     private fun ConnectivityManager.isCurrentlyConnected() =
         activeNetwork?.let(::getNetworkCapabilities)

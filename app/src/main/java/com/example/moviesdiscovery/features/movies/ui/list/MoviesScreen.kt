@@ -11,117 +11,84 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.paging.CombinedLoadStates
-import androidx.paging.LoadState
-import androidx.paging.LoadStates
-import androidx.paging.PagingData
-import androidx.paging.compose.LazyPagingItems
-import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.paging.compose.itemContentType
-import androidx.paging.compose.itemKey
-import androidx.paging.insertSeparators
-import androidx.paging.map
 import com.example.moviesdiscovery.R
+import com.example.moviesdiscovery.core.data.paging.PagingLoadState
 import com.example.moviesdiscovery.core.ui.ScreenPreview
-import com.example.moviesdiscovery.core.ui.component.ButtonIconEnd
 import com.example.moviesdiscovery.core.ui.component.ErrorState
+import com.example.moviesdiscovery.core.ui.component.RetryButton
 import com.example.moviesdiscovery.core.ui.effect.collectAsEffect
+import com.example.moviesdiscovery.core.ui.model.UiStringValue
 import com.example.moviesdiscovery.core.ui.util.showToast
 import com.example.moviesdiscovery.features.movies.domain.Movie
-import com.example.moviesdiscovery.features.movies.ui.component.DateSeparator
-import com.example.moviesdiscovery.features.movies.ui.component.MovieCard
+import com.example.moviesdiscovery.features.movies.ui.component.movieItems
+import com.example.moviesdiscovery.features.movies.ui.component.onPrefetchDistanceReached
+import com.example.moviesdiscovery.features.movies.ui.component.scrollToBottomOnAppendVisible
 import com.example.moviesdiscovery.features.movies.ui.model.MovieUiItem
+import com.example.moviesdiscovery.features.movies.ui.model.MoviesPagingUiState
+import com.example.moviesdiscovery.features.movies.ui.model.PagingLoadUiState
+import com.example.moviesdiscovery.features.movies.ui.model.PagingLoadUiStates
 import com.example.moviesdiscovery.features.movies.ui.model.asUiData
-import com.example.moviesdiscovery.features.movies.ui.model.itemContentType
-import com.example.moviesdiscovery.features.movies.ui.model.itemKey
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.datetime.LocalDate
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoviesScreen(
-    isOnline: Boolean,
     modifier: Modifier = Modifier,
     viewModel: MoviesViewModel = koinViewModel()
 ) {
     val uiData by viewModel.uiData.collectAsStateWithLifecycle()
     val cachedMovies by viewModel.cachedMovies.collectAsStateWithLifecycle()
-    val pagingItems = viewModel.pagingDataFlow.collectAsLazyPagingItems()
-    val uiState = uiData.state
-
-    fun refresh() {
-        if (isOnline) {
-            pagingItems.refresh()
-        } else {
-            viewModel.showNoInternetToast()
-        }
-    }
+    val pagingState by viewModel.pagingUiState.collectAsStateWithLifecycle()
+    viewModel.isOnlineFlow.collectAsStateWithLifecycle()
 
     PullToRefreshBox(
         isRefreshing = uiData.isRefreshingPull,
-        onRefresh = {
-            viewModel.onPullToRefresh()
-            pagingItems.refresh()
-        },
+        onRefresh = viewModel::onPullToRefresh,
         modifier = modifier
     ) {
         when {
             uiData.isLoadingOnFullScreen -> LoadingScreen()
-            uiState is MoviesUiState.OfflineCachedContent ->
-                MoviesCachedStateContent(
+            uiData.state is MoviesUiState.OfflineCachedContent ->
+                MoviesCachedContent(
                     cachedMovies = cachedMovies,
                     onItemClick = viewModel::onItemClick,
                     onFavoriteChange = viewModel::onFavoriteChange,
-                    onRetryClick = ::refresh
+                    onRetryClick = viewModel::refresh
                 )
 
-            uiState is MoviesUiState.PagingContent -> {
-                MoviesPaginationStateContent(
-                    pagingItems = pagingItems,
+            uiData.state is MoviesUiState.PagingContent -> {
+                MoviesPaginationContent(
+                    pagingState = pagingState,
                     onItemClick = viewModel::onItemClick,
                     onFavoriteChange = viewModel::onFavoriteChange,
-                    onRetryClick = ::refresh,
-                    onAppendRetryClick = {
-                        if (isOnline) {
-                            pagingItems.retry()
-                        } else {
-                            viewModel.showNoInternetToast()
-                        }
-                    }
+                    onRetryClick = viewModel::refresh,
+                    onAppendRetryClick = viewModel::onAppendRetryClick,
+                    onLoadNextPage = viewModel::onLoadNextPage
                 )
             }
         }
     }
-    MovieUiEffect(viewModel.uiEvents)
-    LaunchedEffect(isOnline) {
-        viewModel.onNetworkOnlineChanged(isOnline)
-    }
-    LaunchedEffect(pagingItems.loadState) {
-        viewModel.onLoadStateUpdate(pagingItems.loadState)
-    }
+    MoviesUiEffect(viewModel.uiEvents)
 }
 
 @Composable
-private fun MoviesCachedStateContent(
+fun MoviesCachedContent(
     cachedMovies: List<MovieUiItem>,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
@@ -130,7 +97,7 @@ private fun MoviesCachedStateContent(
     when {
         cachedMovies.isEmpty() -> NoInternetState(onRetryClick = onRetryClick)
         else -> {
-            MoviesCachedContent(
+            MoviesCachedListContent(
                 movieItems = cachedMovies,
                 onItemClick = onItemClick,
                 onFavoriteChange = onFavoriteChange,
@@ -140,29 +107,99 @@ private fun MoviesCachedStateContent(
 }
 
 @Composable
-private fun MoviesPaginationStateContent(
-    pagingItems: LazyPagingItems<MovieUiItem>,
+private fun MoviesCachedListContent(
+    movieItems: List<MovieUiItem>,
+    onItemClick: (Int) -> Unit,
+    onFavoriteChange: (Int, Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // TODO maybe need to adding in tabRow
+//        item {
+//            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.safeDrawing))
+//        }
+        movieItems(movieItems, onItemClick, onFavoriteChange)
+        // TODO check after complete HomeScreen
+//        item {
+//            Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.safeDrawing))
+//        }
+    }
+}
+
+@Composable
+private fun MoviesPaginationContent(
+    pagingState: MoviesPagingUiState,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
     onRetryClick: () -> Unit,
-    onAppendRetryClick: () -> Unit
+    onAppendRetryClick: () -> Unit,
+    onLoadNextPage: () -> Unit
 ) {
     when {
-        pagingItems.itemCount == 0 -> {
-            EmptyState(
-                hasError = pagingItems.loadState.hasError,
-                onRetryClick = onRetryClick,
-            )
+        pagingState.items.isEmpty() -> {
+            val errorMessage = pagingState.loadStates.refresh.errorMessage
+            if (errorMessage != null) {
+                ErrorState(
+                    title = errorMessage.asString(),
+                    onRetryClick = onRetryClick,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .wrapContentSize()
+                )
+            } else {
+                EmptyState(onRetryClick = onRetryClick)
+            }
         }
 
         else -> {
-            MoviesPaginationContent(
-                pagingItems = pagingItems,
+            MoviesPaginationListContent(
+                pagingState = pagingState,
                 onItemClick = onItemClick,
                 onFavoriteChange = onFavoriteChange,
-                onAppendRetryClick = onAppendRetryClick
+                onAppendRetryClick = onAppendRetryClick,
+                onLoadNextPage = onLoadNextPage
             )
         }
+    }
+}
+
+@Composable
+private fun MoviesPaginationListContent(
+    pagingState: MoviesPagingUiState,
+    onItemClick: (Int) -> Unit,
+    onFavoriteChange: (Int, Boolean) -> Unit,
+    onAppendRetryClick: () -> Unit,
+    onLoadNextPage: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val appendLoadState = pagingState.loadStates.append
+    val lazyListState = rememberLazyListState()
+    LazyColumn(
+        state = lazyListState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        movieItems(pagingState.items, onItemClick, onFavoriteChange)
+        paginationFooterItem(
+            appendLoadState = appendLoadState.state,
+            progress = { PagingProgressIndicator() },
+            error = {
+                PaginationAppendErrorState(
+                    appendLoadState.errorMessage,
+                    onAppendRetryClick
+                )
+            }
+        )
+    }
+
+    lazyListState.scrollToBottomOnAppendVisible(appendLoadState.state)
+    if (!pagingState.loadStates.endReached) {
+        lazyListState.onPrefetchDistanceReached(pagingState.prefetchDistance, onLoadNextPage)
     }
 }
 
@@ -179,24 +216,15 @@ private fun NoInternetState(onRetryClick: () -> Unit) {
 }
 
 @Composable
-private fun EmptyState(hasError: Boolean, onRetryClick: () -> Unit) {
-    val modifier = Modifier
-        .fillMaxSize()
-        .wrapContentSize()
-    if (hasError) {
-        ErrorState(
-            title = stringResource(R.string.error_something_went_wrong),
-            onRetryClick = onRetryClick,
-            modifier = modifier
-        )
-    } else {
-        ErrorState(
-            title = stringResource(R.string.error_no_found_movies_title),
-            subTitle = stringResource(R.string.try_again_later),
-            onRetryClick = onRetryClick,
-            modifier = modifier
-        )
-    }
+private fun EmptyState(onRetryClick: () -> Unit) {
+    ErrorState(
+        title = stringResource(R.string.error_no_found_movies_title),
+        subTitle = stringResource(R.string.try_again_later),
+        onRetryClick = onRetryClick,
+        modifier = Modifier
+            .fillMaxSize()
+            .wrapContentSize()
+    )
 }
 
 @Composable
@@ -210,123 +238,15 @@ private fun LoadingScreen() {
 }
 
 @Composable
-fun MoviesPaginationContent(
-    pagingItems: LazyPagingItems<MovieUiItem>,
-    onItemClick: (Int) -> Unit,
-    onFavoriteChange: (Int, Boolean) -> Unit,
-    onAppendRetryClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        movieItems(
-            count = pagingItems.itemCount,
-            key = pagingItems.itemKey { it.itemKey() },
-            contentType = pagingItems.itemContentType { it.itemContentType() },
-            item = { index -> pagingItems[index] },
-            onItemClick = onItemClick,
-            onFavoriteChange = onFavoriteChange
-        )
-        paginationFooterItem(
-            loadState = pagingItems.loadState,
-            progress = { PagingProgressIndicator() },
-            error = { PaginationAppendErrorState(onAppendRetryClick) }
-        )
-    }
-}
-
-@Composable
-private fun PaginationAppendErrorState(onRetryClick: () -> Unit) {
+private fun PaginationAppendErrorState(errorMessage: UiStringValue?, onRetryClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .padding(top = 4.dp)
             .fillMaxWidth()
     ) {
-        Text(text = stringResource(R.string.error_something_went_wrong))
+        Text(text = errorMessage?.asString() ?: stringResource(R.string.error_something_went_wrong))
         RetryButton(onClick = onRetryClick)
-    }
-}
-
-@Composable
-fun MoviesCachedContent(
-    movieItems: List<MovieUiItem>,
-    onItemClick: (Int) -> Unit,
-    onFavoriteChange: (Int, Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        movieItems(
-            count = movieItems.size,
-            key = { movieItems[it].itemKey() },
-            contentType = { movieItems[it].itemContentType() },
-            item = { movieItems[it] },
-            onItemClick = onItemClick,
-            onFavoriteChange = onFavoriteChange
-        )
-    }
-}
-
-private fun LazyListScope.movieItems(
-    count: Int,
-    key: ((index: Int) -> Any)? = null,
-    contentType: (index: Int) -> Any? = { null },
-    item: (index: Int) -> MovieUiItem? = { null },
-    onItemClick: (Int) -> Unit,
-    onFavoriteChange: (Int, Boolean) -> Unit
-) {
-    items(
-        count = count,
-        key = key,
-        contentType = contentType
-    ) { index ->
-        when (val movieUiItem = item(index)) {
-            is MovieUiItem.Movie ->
-                MovieCard(
-                    movieInitial = movieUiItem,
-                    onItemClick = { onItemClick.invoke(movieUiItem.id) },
-                    onFavoriteChange = onFavoriteChange,
-                )
-
-            is MovieUiItem.DateSeparatorItem ->
-                DateSeparator(
-                    data = movieUiItem,
-                    modifier = Modifier.padding(top = if (index != 0) 8.dp else 0.dp)
-                )
-
-            null -> {}
-        }
-    }
-}
-
-fun LazyListScope.paginationFooterItem(
-    loadState: CombinedLoadStates,
-    progress: @Composable LazyItemScope.() -> Unit,
-    error: @Composable LazyItemScope.() -> Unit
-) {
-    when (loadState.append) {
-        is LoadState.Loading -> item { progress.invoke(this) }
-        is LoadState.Error -> item { error.invoke(this) }
-        is LoadState.NotLoading -> {}
-    }
-}
-
-@Composable
-fun RetryButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    ButtonIconEnd(
-        icon = rememberVectorPainter(Icons.Default.Refresh),
-        iconContentDescription = null,
-        onClick = onClick,
-        modifier = modifier
-    ) {
-        Text(stringResource(R.string.retry))
     }
 }
 
@@ -343,7 +263,7 @@ private fun PagingProgressIndicator() {
 }
 
 @Composable
-private fun MovieUiEffect(uiEvents: Flow<MoviesUiEvent>) {
+private fun MoviesUiEffect(uiEvents: Flow<MoviesUiEvent>) {
     val context = LocalContext.current
     val noInternetMessage = stringResource(R.string.error_no_internet_connection)
     uiEvents.collectAsEffect { event ->
@@ -354,47 +274,54 @@ private fun MovieUiEffect(uiEvents: Flow<MoviesUiEvent>) {
     }
 }
 
+private fun LazyListScope.paginationFooterItem(
+    appendLoadState: PagingLoadState,
+    progress: @Composable LazyItemScope.() -> Unit,
+    error: @Composable LazyItemScope.() -> Unit
+) {
+    item {
+        when (appendLoadState) {
+            is PagingLoadState.Loading -> progress.invoke(this)
+            is PagingLoadState.Error -> error.invoke(this)
+            is PagingLoadState.NotLoading -> {}
+        }
+        // TODO check after complete HomeScreen
+//        Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.safeDrawing))
+    }
+}
+
 @Preview
 @Composable
 private fun MoviesContentPreview() {
     val releaseDates = List(12) {
         LocalDate(2024, it + 1, it + 1)
     }
-    val pagingDataFlow = MutableStateFlow(
-        PagingData.from(
-            List(3) {
-                Movie(
-                    id = it,
-                    title = "Sonic the Hedgehog 3",
-                    overview = "Sonic, Knuckles, and Tails reunite against a powerful new adversary, Shadow, a mysterious villain with powers unlike anything they have faced before. With their abilities outmatched in every way, Team Sonic must seek out an unlikely alliance in hopes of stopping Shadow and protecting the planet.",
-                    voteAverage = 4.5f,
-                    posterPath = "",
-                    releaseDate = releaseDates[(it / 2) % releaseDates.size],
-                    favorite = false
-                )
-            },
-            sourceLoadStates = LoadStates(
-                refresh = LoadState.NotLoading(endOfPaginationReached = true),
-                prepend = LoadState.NotLoading(endOfPaginationReached = true),
-                append = LoadState.Loading,
-            )
-        ).map(Movie::asUiData)
-            .insertSeparators { beforeMovie, afterMovie ->
-                when {
-                    afterMovie == null -> null
-                    beforeMovie?.monthAndYearRelease != afterMovie.monthAndYearRelease ->
-                        MovieUiItem.DateSeparatorItem(afterMovie.monthAndYearRelease)
-
-                    else -> null
-                }
-            }
+    val movies = List(3) {
+        Movie(
+            id = it,
+            title = "Sonic the Hedgehog 3",
+            overview = "Sonic, Knuckles, and Tails reunite against a powerful new adversary, Shadow, a mysterious villain with powers unlike anything they have faced before. With their abilities outmatched in every way, Team Sonic must seek out an unlikely alliance in hopes of stopping Shadow and protecting the planet.",
+            voteAverage = 4.5f,
+            posterPath = "",
+            releaseDate = releaseDates[(it / 2) % releaseDates.size],
+            favorite = false
+        )
+    }.asUiData()
+    val pagingState = MoviesPagingUiState(
+        items = movies,
+        loadStates = PagingLoadUiStates(
+            refresh = PagingLoadUiState(PagingLoadState.NotLoading.Incomplete),
+            append = PagingLoadUiState(PagingLoadState.NotLoading.Incomplete)
+        ),
+        prefetchDistance = 0
     )
     ScreenPreview {
-        MoviesPaginationContent(
-            pagingItems = pagingDataFlow.collectAsLazyPagingItems(),
+        MoviesPaginationListContent(
+            pagingState = pagingState,
             onFavoriteChange = { _, _ -> },
             onItemClick = {},
-            onAppendRetryClick = {}
+            onAppendRetryClick = {},
+            onLoadNextPage = {}
         )
     }
 }

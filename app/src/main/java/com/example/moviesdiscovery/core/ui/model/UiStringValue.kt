@@ -11,7 +11,7 @@ sealed class UiStringValue {
 
     class StringResource(
         @StringRes val resId: Int,
-        val args: List<Any>
+        val args: List<Any> = emptyList()
     ) : UiStringValue()
 
     @ReadOnlyComposable

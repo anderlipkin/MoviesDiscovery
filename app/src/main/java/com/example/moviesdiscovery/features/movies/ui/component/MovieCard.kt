@@ -22,7 +22,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -31,26 +30,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.rememberAsyncImagePainter
 import coil3.compose.rememberConstraintsSizeResolver
 import coil3.request.ImageRequest
 import com.example.moviesdiscovery.R
 import com.example.moviesdiscovery.core.ui.placeholderInPreview
 import com.example.moviesdiscovery.core.ui.theme.MoviesDiscoveryTheme
-import com.example.moviesdiscovery.features.movies.ui.list.MoviesViewModel
 import com.example.moviesdiscovery.features.movies.ui.model.MovieUiItem
-import org.koin.androidx.compose.koinViewModel
 
 @Composable
 internal fun MovieCard(
-    movieInitial: MovieUiItem.Movie,
+    movie: MovieUiItem.Movie,
     onItemClick: () -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: MoviesViewModel = koinViewModel()
 ) {
-    val movie by viewModel.getMovieById(movieInitial).collectAsStateWithLifecycle()
     val context = LocalContext.current
     ElevatedCard(
         onClick = onItemClick,
@@ -59,7 +53,7 @@ internal fun MovieCard(
         ),
         modifier = modifier
             .fillMaxWidth()
-            .height(172.dp),
+            .height(172.dp)
     ) {
         Column(
             modifier = Modifier
@@ -178,7 +172,7 @@ fun shareMovie(movie: MovieUiItem.Movie, context: Context) {
 private fun MovieCardPreview() {
     MoviesDiscoveryTheme {
         MovieCard(
-            movieInitial = MovieUiItem.Movie(
+            movie = MovieUiItem.Movie(
                 id = 100,
                 title = "Sonic the Hedgehog 3",
                 overview = "Sonic, Knuckles, and Tails reunite against a powerful new adversary, Shadow, a mysterious villain with powers unlike anything they have faced before. With their abilities outmatched in every way, Team Sonic must seek out an unlikely alliance in hopes of stopping Shadow and protecting the planet.",

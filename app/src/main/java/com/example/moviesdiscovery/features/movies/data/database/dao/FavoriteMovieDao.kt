@@ -15,6 +15,9 @@ interface FavoriteMovieDao {
     @Query("SELECT * FROM favorite_movies WHERE id in (:ids)")
     suspend fun getMoviesById(ids: Set<Int>): List<FavoriteMovieEntity>
 
+    @Query("SELECT * FROM favorite_movies WHERE id = :id")
+    fun getMovieById(id: Int): Flow<FavoriteMovieEntity?>
+
     @Query("SELECT * FROM favorite_movies")
     fun getMovies(): Flow<List<FavoriteMovieEntity>>
 

@@ -28,7 +28,6 @@ fun MoviesDiscoveryApp(appState: MoviesAppState, modifier: Modifier = Modifier) 
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { innerPadding ->
             MoviesScreen(
-                isOnline = isOnline,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
