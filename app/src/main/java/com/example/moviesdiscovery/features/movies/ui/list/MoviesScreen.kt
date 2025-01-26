@@ -38,7 +38,6 @@ import com.example.moviesdiscovery.features.movies.ui.component.movieItems
 import com.example.moviesdiscovery.features.movies.ui.component.onPrefetchDistanceReached
 import com.example.moviesdiscovery.features.movies.ui.component.scrollToBottomOnAppendVisible
 import com.example.moviesdiscovery.features.movies.ui.model.MovieUiItem
-import com.example.moviesdiscovery.features.movies.ui.model.MoviesPagingUiState
 import com.example.moviesdiscovery.features.movies.ui.model.PagingLoadUiState
 import com.example.moviesdiscovery.features.movies.ui.model.PagingLoadUiStates
 import com.example.moviesdiscovery.features.movies.ui.model.asUiData
@@ -52,9 +51,7 @@ fun MoviesScreen(
     modifier: Modifier = Modifier,
     viewModel: MoviesViewModel = koinViewModel()
 ) {
-    val uiData by viewModel.uiData.collectAsStateWithLifecycle()
-    val cachedMovies by viewModel.cachedMovies.collectAsStateWithLifecycle()
-    val pagingState by viewModel.pagingUiState.collectAsStateWithLifecycle()
+    val uiData by viewModel.uiState.collectAsStateWithLifecycle()
     viewModel.isOnlineFlow.collectAsStateWithLifecycle()
 
     PullToRefreshBox(
@@ -62,25 +59,29 @@ fun MoviesScreen(
         onRefresh = viewModel::onPullToRefresh,
         modifier = modifier
     ) {
-        when {
-            uiData.isLoadingOnFullScreen -> LoadingScreen()
-            uiData.state is MoviesUiState.OfflineCachedContent ->
-                MoviesCachedContent(
-                    cachedMovies = cachedMovies,
-                    onItemClick = viewModel::onItemClick,
-                    onFavoriteChange = viewModel::onFavoriteChange,
-                    onRetryClick = viewModel::refresh
-                )
+        if (uiData.isLoadingOnFullScreen) {
+            LoadingScreen()
+        } else {
+            when (val pagingState = uiData.contentState) {
+                MoviesContentUiState.InitialLoading -> LoadingScreen()
+                is MoviesContentUiState.OfflineCached ->
+                    MoviesCachedContent(
+                        cachedMovies = pagingState.items,
+                        onItemClick = viewModel::onItemClick,
+                        onFavoriteChange = viewModel::onFavoriteChange,
+                        onRetryClick = viewModel::refresh
+                    )
 
-            uiData.state is MoviesUiState.PagingContent -> {
-                MoviesPaginationContent(
-                    pagingState = pagingState,
-                    onItemClick = viewModel::onItemClick,
-                    onFavoriteChange = viewModel::onFavoriteChange,
-                    onRetryClick = viewModel::refresh,
-                    onAppendRetryClick = viewModel::onAppendRetryClick,
-                    onLoadNextPage = viewModel::onLoadNextPage
-                )
+                is MoviesContentUiState.Paging -> {
+                    MoviesPaginationContent(
+                        pagingState = pagingState,
+                        onItemClick = viewModel::onItemClick,
+                        onFavoriteChange = viewModel::onFavoriteChange,
+                        onRetryClick = viewModel::refresh,
+                        onAppendRetryClick = viewModel::onAppendRetryClick,
+                        onLoadNextPage = viewModel::onLoadNextPage
+                    )
+                }
             }
         }
     }
@@ -132,7 +133,7 @@ private fun MoviesCachedListContent(
 
 @Composable
 private fun MoviesPaginationContent(
-    pagingState: MoviesPagingUiState,
+    pagingState: MoviesContentUiState.Paging,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
     onRetryClick: () -> Unit,
@@ -169,7 +170,7 @@ private fun MoviesPaginationContent(
 
 @Composable
 private fun MoviesPaginationListContent(
-    pagingState: MoviesPagingUiState,
+    pagingState: MoviesContentUiState.Paging,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
     onAppendRetryClick: () -> Unit,
@@ -198,7 +199,7 @@ private fun MoviesPaginationListContent(
     }
 
     lazyListState.scrollToBottomOnAppendVisible(appendLoadState.state)
-    if (!pagingState.loadStates.endReached) {
+    if (pagingState.appendPrefetchEnabled) {
         lazyListState.onPrefetchDistanceReached(pagingState.prefetchDistance, onLoadNextPage)
     }
 }
@@ -307,7 +308,7 @@ private fun MoviesContentPreview() {
             favorite = false
         )
     }.asUiData()
-    val pagingState = MoviesPagingUiState(
+    val pagingState = MoviesContentUiState.Paging(
         items = movies,
         loadStates = PagingLoadUiStates(
             refresh = PagingLoadUiState(PagingLoadState.NotLoading.Incomplete),

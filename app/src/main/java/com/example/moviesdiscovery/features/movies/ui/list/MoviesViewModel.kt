@@ -1,5 +1,6 @@
 package com.example.moviesdiscovery.features.movies.ui.list
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.moviesdiscovery.core.data.paging.PagingLoadState
@@ -9,7 +10,6 @@ import com.example.moviesdiscovery.features.movies.data.MovieRepository
 import com.example.moviesdiscovery.features.movies.domain.Movie
 import com.example.moviesdiscovery.features.movies.domain.mergeFavorites
 import com.example.moviesdiscovery.features.movies.ui.model.MovieUiItem
-import com.example.moviesdiscovery.features.movies.ui.model.MoviesPagingUiState
 import com.example.moviesdiscovery.features.movies.ui.model.PagingLoadUiStates
 import com.example.moviesdiscovery.features.movies.ui.model.asUiData
 import com.example.moviesdiscovery.features.movies.ui.model.asUiStates
@@ -18,15 +18,14 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -39,16 +38,13 @@ class MoviesViewModel(
 
     private val _uiEvents = Channel<MoviesUiEvent>(capacity = Channel.BUFFERED)
     val uiEvents = _uiEvents.receiveAsFlow()
-    private val _uiData = MutableStateFlow(
-        MoviesUiData(
+
+    private val _viewModelState = MutableStateFlow(
+        MoviesViewModelState(
             isRefreshingPull = false,
-            isLoading = true,
-            state = MoviesUiState.InitialLoading
+            isLoading = true
         )
     )
-    val uiData = _uiData.asStateFlow()
-    private val uiState: MoviesUiState
-        get() = _uiData.value.state
 
     val isOnlineFlow = connectivityNetworkMonitor.isOnline
         .stateIn(
@@ -63,44 +59,54 @@ class MoviesViewModel(
     private val pagingPrefetchDistance: Int
         get() = pagingDataFetcher.pagingConfig.value.prefetchDistance
 
-    private val pagingLoadStatesFlow = pagingDataFetcher.loadStates
-        .onEach { processLoadStateToSideEffects(it) }
-        .map { it.asUiStates(isOnline) }
-
-    private val pagingLoadStates: PagingLoadStates
-        get() = pagingDataFetcher.loadStates.value
-
     private val favoriteIdsFlow = movieRepository.getFavoriteMovieIdsFlow().map { it.toSet() }
     private val pagingMoviesFlow =
         combine(pagingDataFetcher.items, favoriteIdsFlow) { movies, favoriteIds ->
             movies.mergeFavorites(favoriteIds).asUiData()
         }
 
-    val pagingUiState: StateFlow<MoviesPagingUiState> =
-        combine(pagingLoadStatesFlow, pagingMoviesFlow, ::buildPagingUiState)
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                buildPagingUiState(pagingLoadStates.asUiStates(isOnline), emptyList())
-            )
+    private val contentStateFlow = pagingDataFetcher.loadStates
+        .scan(MoviesPagingLoadContentState.InitialLoading as MoviesPagingLoadContentState) { action, pagingLoadStates ->
+            processLoadStateToSideEffects(action, pagingLoadStates)
+            getNextContentState(action, pagingLoadStates.refresh, isOnline)
+        }
+        .distinctUntilChanged()
+        .flatMapLatest { nextUiState ->
+            when (nextUiState) {
+                MoviesPagingLoadContentState.InitialLoading -> flowOf(MoviesContentUiState.InitialLoading)
+                MoviesPagingLoadContentState.OfflineCached ->
+                    movieRepository.getMoviesByQueryFlow(OFFLINE_CACHED_SIZE)
+                        .map { it.map(Movie::asUiData).insertDateSeparators() }
+                        .map { MoviesContentUiState.OfflineCached(it) }
 
-    val cachedMovies: StateFlow<List<MovieUiItem>> =
-        movieRepository.getMoviesByQueryFlow(OFFLINE_CACHED_SIZE)
-            .takeWhile {
-                if (uiState is MoviesUiState.OfflineCachedContent) { // Cached data ready to show
-                    updateUiData(isLoading = false)
-                }
-                uiState !is MoviesUiState.PagingContent
+                MoviesPagingLoadContentState.Paging ->
+                    combine(
+                        pagingDataFetcher.loadStates.map { it.asUiStates(isOnline) },
+                        pagingMoviesFlow,
+                        ::buildPagingUiState
+                    )
             }
-            .map { it.map(Movie::asUiData).insertDateSeparators() }
-            .distinctUntilChanged()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        }
+
+    val uiState = combine(_viewModelState, contentStateFlow) { viewModelState, contentState ->
+        MoviesUiState(
+            isRefreshingPull = viewModelState.isRefreshingPull,
+            isLoading = viewModelState.isLoading,
+            contentState = contentState
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        MoviesUiState(
+            isRefreshingPull = _viewModelState.value.isRefreshingPull,
+            isLoading = _viewModelState.value.isLoading,
+            contentState = MoviesContentUiState.InitialLoading
+        )
+    )
 
     init {
         viewModelScope.launch {
-            refreshOnOnlineOrAction {
-                updateUiData(state = MoviesUiState.OfflineCachedContent)
-            }
+            refreshPaging()
         }
     }
 
@@ -114,23 +120,22 @@ class MoviesViewModel(
 
     fun onPullToRefresh() {
         viewModelScope.launch {
-            updateUiData(isRefreshingPull = true)
+            updateViewModelState(isRefreshingPull = true)
             refreshOnOnlineOrAction {
                 showNoInternetToast()
             }
             delay(20) // Can remove after increase material3 version https://issuetracker.google.com/issues/359949836
-            updateUiData(isRefreshingPull = false)
+            updateViewModelState(isRefreshingPull = false)
         }
     }
 
     fun onAppendRetryClick() {
         viewModelScope.launch {
-            pagingDataFetcher.loadNextPage()
-//            if (isOnline) {
-//                pagingDataFetcher.loadNextPage()
-//            } else {
-//                showNoInternetToast()
-//            }
+            if (isOnline) {
+                pagingDataFetcher.loadNextPage()
+            } else {
+                showNoInternetToast()
+            }
         }
     }
 
@@ -150,7 +155,10 @@ class MoviesViewModel(
 
     }
 
-    private fun processLoadStateToSideEffects(loadState: PagingLoadStates) {
+    private fun processLoadStateToSideEffects(
+        uiState: MoviesPagingLoadContentState,
+        loadState: PagingLoadStates
+    ) {
         if (loadState.hasError) {
             viewModelScope.launch {
                 when {
@@ -160,7 +168,7 @@ class MoviesViewModel(
                         }
                     }
 
-                    uiState !is MoviesUiState.InitialLoading -> {
+                    uiState !is MoviesPagingLoadContentState.InitialLoading -> {
                         sendEvent(MoviesUiEvent.NoInternetToast)
                     }
                 }
@@ -177,37 +185,38 @@ class MoviesViewModel(
     }
 
     private suspend fun refreshPaging() {
-        updateUiData(isLoading = true)
+        updateViewModelState(isLoading = true)
         pagingDataFetcher.refresh()
-        updateUiData(
-            isLoading = false,
-            state = reduceNextUiState(pagingLoadStates.refresh)
-        )
+        updateViewModelState(isLoading = false)
     }
 
-    private fun reduceNextUiState(refreshLoadState: PagingLoadState): MoviesUiState {
-        val nextState: MoviesUiState = when (val uiState = uiState) {
-            MoviesUiState.InitialLoading -> {
+    private fun getNextContentState(
+        uiState: MoviesPagingLoadContentState,
+        refreshLoadState: PagingLoadState,
+        isOnline: Boolean
+    ): MoviesPagingLoadContentState {
+        val nextState: MoviesPagingLoadContentState = when (uiState) {
+            MoviesPagingLoadContentState.InitialLoading -> {
                 when (refreshLoadState) {
                     PagingLoadState.Loading -> uiState
-                    is PagingLoadState.NotLoading -> MoviesUiState.PagingContent
+                    is PagingLoadState.NotLoading -> MoviesPagingLoadContentState.Paging
                     is PagingLoadState.Error -> {
                         if (isOnline) {
-                            MoviesUiState.PagingContent
+                            MoviesPagingLoadContentState.Paging
                         } else {
-                            MoviesUiState.OfflineCachedContent
+                            MoviesPagingLoadContentState.OfflineCached
                         }
                     }
                 }
             }
 
-            MoviesUiState.OfflineCachedContent -> {
+            is MoviesPagingLoadContentState.OfflineCached -> {
                 when (refreshLoadState) {
                     PagingLoadState.Loading -> uiState
-                    is PagingLoadState.NotLoading -> MoviesUiState.PagingContent
+                    is PagingLoadState.NotLoading -> MoviesPagingLoadContentState.Paging
                     is PagingLoadState.Error -> {
                         if (isOnline) {
-                            MoviesUiState.PagingContent
+                            MoviesPagingLoadContentState.Paging
                         } else {
                             uiState
                         }
@@ -215,21 +224,19 @@ class MoviesViewModel(
                 }
             }
 
-            is MoviesUiState.PagingContent -> uiState
+            is MoviesPagingLoadContentState.Paging -> uiState
         }
         return nextState
     }
 
-    private fun updateUiData(
+    private fun updateViewModelState(
         isRefreshingPull: Boolean? = null,
-        isLoading: Boolean? = null,
-        state: MoviesUiState? = null
+        isLoading: Boolean? = null
     ) {
-        _uiData.update {
+        _viewModelState.update {
             it.copy(
                 isRefreshingPull = isRefreshingPull ?: it.isRefreshingPull,
-                isLoading = isLoading ?: it.isLoading,
-                state = state ?: it.state
+                isLoading = isLoading ?: it.isLoading
             )
         }
     }
@@ -245,8 +252,8 @@ class MoviesViewModel(
     private fun buildPagingUiState(
         pagingLoadStates: PagingLoadUiStates,
         movies: List<MovieUiItem>
-    ): MoviesPagingUiState {
-        return MoviesPagingUiState(
+    ): MoviesContentUiState.Paging {
+        return MoviesContentUiState.Paging(
             items = movies,
             loadStates = pagingLoadStates,
             prefetchDistance = pagingPrefetchDistance
@@ -255,10 +262,15 @@ class MoviesViewModel(
 
 }
 
-data class MoviesUiData(
+data class MoviesViewModelState(
     val isRefreshingPull: Boolean,
     val isLoading: Boolean,
-    val state: MoviesUiState
+)
+
+data class MoviesUiState(
+    val isRefreshingPull: Boolean,
+    val isLoading: Boolean,
+    val contentState: MoviesContentUiState
 ) {
     val isLoadingOnFullScreen: Boolean
         get() = isLoading && !isRefreshingPull
@@ -269,8 +281,26 @@ sealed class MoviesUiEvent {
     data class ShowToast(val message: String) : MoviesUiEvent()
 }
 
-sealed class MoviesUiState {
-    data object InitialLoading : MoviesUiState()
-    data object PagingContent : MoviesUiState()
-    data object OfflineCachedContent : MoviesUiState()
+sealed class MoviesPagingLoadContentState {
+    data object InitialLoading : MoviesPagingLoadContentState()
+    data object Paging : MoviesPagingLoadContentState()
+    data object OfflineCached : MoviesPagingLoadContentState()
+}
+
+sealed class MoviesContentUiState {
+    data object InitialLoading : MoviesContentUiState()
+
+    @Immutable
+    data class Paging(
+        val items: List<MovieUiItem>,
+        val loadStates: PagingLoadUiStates,
+        val prefetchDistance: Int
+    ) : MoviesContentUiState() {
+        val appendPrefetchEnabled =
+            !loadStates.endReached && loadStates.append.state is PagingLoadState.NotLoading
+    }
+
+    data class OfflineCached(
+        val items: List<MovieUiItem>
+    ) : MoviesContentUiState()
 }
