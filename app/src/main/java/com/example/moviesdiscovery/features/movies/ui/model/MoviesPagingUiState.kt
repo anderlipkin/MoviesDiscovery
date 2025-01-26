@@ -11,7 +11,10 @@ data class MoviesPagingUiState(
     val items: List<MovieUiItem>,
     val loadStates: PagingLoadUiStates,
     val prefetchDistance: Int
-)
+) {
+    val appendPrefetchEnabled =
+        !loadStates.endReached && loadStates.append.state is PagingLoadState.NotLoading
+}
 
 data class PagingLoadUiStates(
     val refresh: PagingLoadUiState,

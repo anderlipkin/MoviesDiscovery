@@ -125,12 +125,11 @@ class MoviesViewModel(
 
     fun onAppendRetryClick() {
         viewModelScope.launch {
-            pagingDataFetcher.loadNextPage()
-//            if (isOnline) {
-//                pagingDataFetcher.loadNextPage()
-//            } else {
-//                showNoInternetToast()
-//            }
+            if (isOnline) {
+                pagingDataFetcher.loadNextPage()
+            } else {
+                showNoInternetToast()
+            }
         }
     }
 

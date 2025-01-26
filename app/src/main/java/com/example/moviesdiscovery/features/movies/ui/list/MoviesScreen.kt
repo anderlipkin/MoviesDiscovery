@@ -198,7 +198,7 @@ private fun MoviesPaginationListContent(
     }
 
     lazyListState.scrollToBottomOnAppendVisible(appendLoadState.state)
-    if (!pagingState.loadStates.endReached) {
+    if (pagingState.appendPrefetchEnabled) {
         lazyListState.onPrefetchDistanceReached(pagingState.prefetchDistance, onLoadNextPage)
     }
 }
