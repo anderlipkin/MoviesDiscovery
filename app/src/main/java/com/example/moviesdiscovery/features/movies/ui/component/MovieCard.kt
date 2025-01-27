@@ -2,6 +2,7 @@ package com.example.moviesdiscovery.features.movies.ui.component
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -107,6 +108,7 @@ private fun ThumbnailPoster(imageUrl: String, modifier: Modifier = Modifier) {
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(imageUrl)
+            .memoryCacheKey(imageUrl)
             .crossfade(true)
             .build(),
         error = placeholderInPreview { rememberVectorPainter(Icons.Filled.Movie) },

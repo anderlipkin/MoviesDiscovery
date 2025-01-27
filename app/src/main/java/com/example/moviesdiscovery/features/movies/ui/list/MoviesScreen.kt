@@ -2,13 +2,17 @@ package com.example.moviesdiscovery.features.movies.ui.list
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,12 +35,14 @@ import com.example.moviesdiscovery.core.ui.component.ErrorWithRetryButton
 import com.example.moviesdiscovery.core.ui.component.LoadingScreen
 import com.example.moviesdiscovery.core.ui.component.RetryButton
 import com.example.moviesdiscovery.core.ui.effect.collectAsEffect
+import com.example.moviesdiscovery.core.ui.model.LazyListScrollPosition
 import com.example.moviesdiscovery.core.ui.model.UiStringValue
 import com.example.moviesdiscovery.core.ui.util.showToast
 import com.example.moviesdiscovery.features.movies.domain.Movie
 import com.example.moviesdiscovery.features.movies.ui.component.MoviesContent
 import com.example.moviesdiscovery.features.movies.ui.component.movieItems
 import com.example.moviesdiscovery.features.movies.ui.component.onPrefetchDistanceReached
+import com.example.moviesdiscovery.features.movies.ui.component.saveScrollPositionOnDispose
 import com.example.moviesdiscovery.features.movies.ui.component.scrollToBottomOnAppendVisible
 import com.example.moviesdiscovery.features.movies.ui.model.MovieUiItem
 import com.example.moviesdiscovery.features.movies.ui.model.MoviesPagingUiState
@@ -57,30 +63,35 @@ fun MoviesScreen(
     val cachedMovies by viewModel.cachedMovies.collectAsStateWithLifecycle()
     val pagingState by viewModel.pagingUiState.collectAsStateWithLifecycle()
     viewModel.isOnlineFlow.collectAsStateWithLifecycle()
-
     PullToRefreshBox(
         isRefreshing = uiData.isRefreshingPull,
         onRefresh = viewModel::onPullToRefresh,
         modifier = modifier
     ) {
+        val uiState = uiData.state
         when {
             uiData.isLoadingOnFullScreen -> LoadingScreen()
-            uiData.state is MoviesUiState.OfflineCachedContent ->
+            uiState is MoviesUiState.OfflineCachedContent -> {
                 MoviesCachedContent(
                     cachedMovies = cachedMovies,
+                    scrollPosition = uiState.scrollPosition,
                     onItemClick = viewModel::onItemClick,
                     onFavoriteChange = viewModel::onFavoriteChange,
-                    onRetryClick = viewModel::refresh
+                    onRetryClick = viewModel::refresh,
+                    onScrollPositionSave = viewModel::saveScrollPosition
                 )
+            }
 
-            uiData.state is MoviesUiState.PagingContent -> {
+            uiState is MoviesUiState.PagingContent -> {
                 MoviesPaginationContent(
                     pagingState = pagingState,
+                    scrollPosition = uiState.scrollPosition,
                     onItemClick = viewModel::onItemClick,
                     onFavoriteChange = viewModel::onFavoriteChange,
                     onRetryClick = viewModel::refresh,
                     onAppendRetryClick = viewModel::onAppendRetryClick,
-                    onLoadNextPage = viewModel::onLoadNextPage
+                    onLoadNextPage = viewModel::onLoadNextPage,
+                    onScrollPositionSave = viewModel::saveScrollPosition
                 )
             }
         }
@@ -91,17 +102,21 @@ fun MoviesScreen(
 @Composable
 private fun MoviesCachedContent(
     cachedMovies: List<MovieUiItem>,
+    scrollPosition: LazyListScrollPosition,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
-    onRetryClick: () -> Unit
+    onRetryClick: () -> Unit,
+    onScrollPositionSave: (LazyListScrollPosition) -> Unit
 ) {
     when {
         cachedMovies.isEmpty() -> NoInternetState(onRetryClick = onRetryClick)
         else -> {
             MoviesContent(
                 movieItems = cachedMovies,
+                scrollPosition = scrollPosition,
                 onItemClick = onItemClick,
                 onFavoriteChange = onFavoriteChange,
+                onScrollPositionSave = onScrollPositionSave
             )
         }
     }
@@ -110,11 +125,13 @@ private fun MoviesCachedContent(
 @Composable
 private fun MoviesPaginationContent(
     pagingState: MoviesPagingUiState,
+    scrollPosition: LazyListScrollPosition,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
     onRetryClick: () -> Unit,
     onAppendRetryClick: () -> Unit,
-    onLoadNextPage: () -> Unit
+    onLoadNextPage: () -> Unit,
+    onScrollPositionSave: (LazyListScrollPosition) -> Unit
 ) {
     when {
         pagingState.items.isEmpty() -> {
@@ -135,10 +152,12 @@ private fun MoviesPaginationContent(
         else -> {
             MoviesPaginationListContent(
                 pagingState = pagingState,
+                scrollPosition = scrollPosition,
                 onItemClick = onItemClick,
                 onFavoriteChange = onFavoriteChange,
                 onAppendRetryClick = onAppendRetryClick,
-                onLoadNextPage = onLoadNextPage
+                onLoadNextPage = onLoadNextPage,
+                onScrollPositionSave = onScrollPositionSave
             )
         }
     }
@@ -147,14 +166,19 @@ private fun MoviesPaginationContent(
 @Composable
 private fun MoviesPaginationListContent(
     pagingState: MoviesPagingUiState,
+    scrollPosition: LazyListScrollPosition,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
     onAppendRetryClick: () -> Unit,
     onLoadNextPage: () -> Unit,
+    onScrollPositionSave: (LazyListScrollPosition) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val appendLoadState = pagingState.loadStates.append
-    val lazyListState = rememberLazyListState()
+    val lazyListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = scrollPosition.firstVisibleItemIndex,
+        initialFirstVisibleItemScrollOffset = scrollPosition.firstVisibleItemScrollOffset
+    )
     LazyColumn(
         state = lazyListState,
         modifier = modifier.fillMaxSize(),
@@ -174,6 +198,7 @@ private fun MoviesPaginationListContent(
         )
     }
 
+    lazyListState.saveScrollPositionOnDispose(onScrollPositionSave)
     lazyListState.scrollToBottomOnAppendVisible(appendLoadState.state)
     if (pagingState.appendPrefetchEnabled) {
         lazyListState.onPrefetchDistanceReached(pagingState.prefetchDistance, onLoadNextPage)
@@ -243,26 +268,25 @@ private fun MoviesUiEffect(uiEvents: Flow<MoviesUiEvent>) {
 
 private fun LazyListScope.paginationFooterItem(
     appendLoadState: PagingLoadState,
-    progress: @Composable LazyItemScope.() -> Unit,
-    error: @Composable LazyItemScope.() -> Unit
+    progress: @Composable ColumnScope.() -> Unit,
+    error: @Composable ColumnScope.() -> Unit
 ) {
     item {
-        when (appendLoadState) {
-            is PagingLoadState.Loading -> progress.invoke(this)
-            is PagingLoadState.Error -> error.invoke(this)
-            is PagingLoadState.NotLoading -> {}
+        Column {
+            when (appendLoadState) {
+                is PagingLoadState.Loading -> progress.invoke(this)
+                is PagingLoadState.Error -> error.invoke(this)
+                is PagingLoadState.NotLoading -> {}
+            }
+            Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.safeDrawing))
         }
-        // TODO check after complete HomeScreen
-//        Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.safeDrawing))
     }
 }
 
 @Preview
 @Composable
 private fun MoviesContentPreview() {
-    val releaseDates = List(12) {
-        LocalDate(2024, it + 1, it + 1)
-    }
+    val releaseDates = List(12) { LocalDate(2024, it + 1, it + 1) }
     val movies = List(3) {
         Movie(
             id = it,
@@ -285,10 +309,12 @@ private fun MoviesContentPreview() {
     ScreenPreview {
         MoviesPaginationListContent(
             pagingState = pagingState,
+            scrollPosition = LazyListScrollPosition(),
             onFavoriteChange = { _, _ -> },
             onItemClick = {},
             onAppendRetryClick = {},
-            onLoadNextPage = {}
+            onLoadNextPage = {},
+            onScrollPositionSave = {}
         )
     }
 }

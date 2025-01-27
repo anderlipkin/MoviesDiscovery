@@ -24,6 +24,8 @@ fun FavoriteMoviesScreen(
     viewModel: FavoriteMoviesViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val scrollPosition by viewModel.scrollPosition.collectAsStateWithLifecycle()
+
     when (val uiState = uiState) {
         FavoriteMoviesUiState.Loading -> LoadingScreen()
         is FavoriteMoviesUiState.Success -> if (uiState.movies.isEmpty()) {
@@ -31,8 +33,10 @@ fun FavoriteMoviesScreen(
         } else {
             MoviesContent(
                 movieItems = uiState.movies,
+                scrollPosition = scrollPosition,
                 onItemClick = viewModel::onItemClick,
                 onFavoriteChange = viewModel::onFavoriteChange,
+                onScrollPositionSave = viewModel::saveScrollPosition,
                 modifier = modifier
             )
         }

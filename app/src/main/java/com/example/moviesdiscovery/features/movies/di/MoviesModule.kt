@@ -10,6 +10,7 @@ import com.example.moviesdiscovery.features.movies.data.database.dao.FavoriteMov
 import com.example.moviesdiscovery.features.movies.data.database.dao.MovieDao
 import com.example.moviesdiscovery.features.movies.data.remote.MovieApiService
 import com.example.moviesdiscovery.features.movies.data.remote.MoviePagingDataSource
+import com.example.moviesdiscovery.features.movies.ui.HomeMoviesViewModel
 import com.example.moviesdiscovery.features.movies.ui.favorite.FavoriteMoviesViewModel
 import com.example.moviesdiscovery.features.movies.ui.list.MoviesViewModel
 import org.koin.android.ext.koin.androidContext
@@ -45,4 +46,5 @@ val moviesFeatureModule = module {
     includes(dataModule)
     viewModelOf(::MoviesViewModel)
     viewModelOf(::FavoriteMoviesViewModel)
+    viewModelOf(::HomeMoviesViewModel)
 }

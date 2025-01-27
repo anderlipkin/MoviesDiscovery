@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.moviesdiscovery.core.data.paging.PagingLoadState
 import com.example.moviesdiscovery.core.data.paging.PagingLoadStates
 import com.example.moviesdiscovery.core.data.util.ConnectivityNetworkMonitor
+import com.example.moviesdiscovery.core.ui.model.LazyListScrollPosition
 import com.example.moviesdiscovery.features.movies.data.FavoriteMoviesRepository
 import com.example.moviesdiscovery.features.movies.data.MovieRepository
 import com.example.moviesdiscovery.features.movies.domain.Movie
@@ -101,7 +102,22 @@ class MoviesViewModel(
     init {
         viewModelScope.launch {
             refreshOnOnlineOrAction {
-                updateUiData(state = MoviesUiState.OfflineCachedContent)
+                updateUiData(state = MoviesUiState.OfflineCachedContent())
+            }
+        }
+    }
+
+    fun saveScrollPosition(scrollPosition: LazyListScrollPosition) {
+        when (val uiState = uiState) {
+            MoviesUiState.InitialLoading -> {}
+            is MoviesUiState.OfflineCachedContent -> {
+                _uiData.update { it.copy(state = uiState.copy(scrollPosition = scrollPosition)) }
+            }
+
+            is MoviesUiState.PagingContent -> {
+                _uiData.update {
+                    it.copy(state = uiState.copy(scrollPosition = scrollPosition))
+                }
             }
         }
     }
@@ -188,27 +204,27 @@ class MoviesViewModel(
 
     private fun reduceNextUiState(refreshLoadState: PagingLoadState): MoviesUiState {
         val nextState: MoviesUiState = when (val uiState = uiState) {
-            MoviesUiState.InitialLoading -> {
+            is MoviesUiState.InitialLoading -> {
                 when (refreshLoadState) {
                     PagingLoadState.Loading -> uiState
-                    is PagingLoadState.NotLoading -> MoviesUiState.PagingContent
+                    is PagingLoadState.NotLoading -> MoviesUiState.PagingContent()
                     is PagingLoadState.Error -> {
                         if (isOnline) {
-                            MoviesUiState.PagingContent
+                            MoviesUiState.PagingContent()
                         } else {
-                            MoviesUiState.OfflineCachedContent
+                            MoviesUiState.OfflineCachedContent()
                         }
                     }
                 }
             }
 
-            MoviesUiState.OfflineCachedContent -> {
+            is MoviesUiState.OfflineCachedContent -> {
                 when (refreshLoadState) {
                     PagingLoadState.Loading -> uiState
-                    is PagingLoadState.NotLoading -> MoviesUiState.PagingContent
+                    is PagingLoadState.NotLoading -> MoviesUiState.PagingContent()
                     is PagingLoadState.Error -> {
                         if (isOnline) {
-                            MoviesUiState.PagingContent
+                            MoviesUiState.PagingContent()
                         } else {
                             uiState
                         }
@@ -272,6 +288,11 @@ sealed class MoviesUiEvent {
 
 sealed class MoviesUiState {
     data object InitialLoading : MoviesUiState()
-    data object PagingContent : MoviesUiState()
-    data object OfflineCachedContent : MoviesUiState()
+    data class PagingContent(
+        val scrollPosition: LazyListScrollPosition = LazyListScrollPosition()
+    ) : MoviesUiState()
+
+    data class OfflineCachedContent(
+        val scrollPosition: LazyListScrollPosition = LazyListScrollPosition()
+    ) : MoviesUiState()
 }
