@@ -1,5 +1,7 @@
 package com.example.moviesdiscovery.features.movies.domain
 
+import com.example.moviesdiscovery.features.movies.domain.MovieSortBy.SortOrder
+
 data class MovieQuery(
     val voteAverageMin: Float? = null,
     val voteCountMin: Int? = null,
@@ -21,3 +23,24 @@ sealed class MovieSortBy {
         Asc, Desc
     }
 }
+
+fun List<MovieSortBy>.asComparator() =
+    map { sortBy ->
+        when (sortBy) {
+            is MovieSortBy.PrimaryReleaseDate -> {
+                when (sortBy.sortOrder) {
+                    SortOrder.Asc -> compareBy<Movie> { it.releaseDate }
+                    SortOrder.Desc -> compareByDescending<Movie> { it.releaseDate }
+                }
+            }
+
+            is MovieSortBy.VoteAverage -> {
+                when (sortBy.sortOrder) {
+                    SortOrder.Asc -> compareBy<Movie> { it.voteAverage }
+                    SortOrder.Desc -> compareByDescending<Movie> { it.voteAverage }
+                }
+            }
+        }
+    }.reduce { acc, comparator ->
+        acc.then(comparator)
+    }

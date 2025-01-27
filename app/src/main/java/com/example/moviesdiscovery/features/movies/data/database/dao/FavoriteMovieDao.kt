@@ -10,10 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FavoriteMovieDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(vararg movies: FavoriteMovieEntity)
-
-    @Query("SELECT * FROM favorite_movies WHERE id in (:ids)")
-    suspend fun getMoviesById(ids: Set<Int>): List<FavoriteMovieEntity>
+    suspend fun insert(movies: List<FavoriteMovieEntity>)
 
     @Query("SELECT * FROM favorite_movies WHERE id = :id")
     fun getMovieById(id: Int): Flow<FavoriteMovieEntity?>
@@ -29,6 +26,9 @@ interface FavoriteMovieDao {
 
     @Query("DELETE FROM favorite_movies WHERE id = :id")
     suspend fun deleteMovieById(id: Int)
+
+    @Query("DELETE FROM favorite_movies WHERE id in (:ids)")
+    suspend fun deleteMovieByIds(ids: Set<Int>)
 
     @Query("DELETE FROM favorite_movies")
     suspend fun clearAll()

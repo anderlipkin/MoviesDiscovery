@@ -30,7 +30,7 @@ class MoviePagingDataSource(
                     moviesDao.insertAll(movies.map { it.asEntity() })
                 }
                 LoadResult.Page(
-                    data = movies.map { it.asDomain(false) },
+                    data = movies.map { it.asDomain() },
                     nextKey = pageContext.copy(page = page + 1)
                 )
             }

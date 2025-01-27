@@ -5,16 +5,13 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.moviesdiscovery.features.movies.data.database.dao.FavoriteMovieDao
 import com.example.moviesdiscovery.features.movies.data.database.dao.MovieDao
-import com.example.moviesdiscovery.features.movies.data.database.dao.MovieRemoteKeyDao
 import com.example.moviesdiscovery.features.movies.data.database.entity.FavoriteMovieEntity
 import com.example.moviesdiscovery.features.movies.data.database.entity.MovieEntity
-import com.example.moviesdiscovery.features.movies.data.database.entity.MovieRemoteKeyEntity
 
 @Database(
     entities = [
         MovieEntity::class,
-        FavoriteMovieEntity::class,
-        MovieRemoteKeyEntity::class
+        FavoriteMovieEntity::class
     ],
     version = 1
 )
@@ -22,5 +19,4 @@ import com.example.moviesdiscovery.features.movies.data.database.entity.MovieRem
 abstract class MovieDatabase : RoomDatabase() {
     abstract fun movieDao(): MovieDao
     abstract fun favoriteMovieDao(): FavoriteMovieDao
-    abstract fun remoteKeyDao(): MovieRemoteKeyDao
 }

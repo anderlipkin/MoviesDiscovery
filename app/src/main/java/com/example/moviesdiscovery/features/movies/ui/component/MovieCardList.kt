@@ -2,6 +2,7 @@ package com.example.moviesdiscovery.features.movies.ui.component
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.Modifier
 import com.example.moviesdiscovery.features.movies.ui.model.MovieUiItem
 import com.example.moviesdiscovery.features.movies.ui.model.itemContentType
 import com.example.moviesdiscovery.features.movies.ui.model.itemKey
@@ -22,6 +23,7 @@ fun LazyListScope.movieItems(
                     movie = movieUiItem,
                     onItemClick = { onItemClick.invoke(movieUiItem.id) },
                     onFavoriteChange = onFavoriteChange,
+                    modifier = Modifier.animateItem()
                 )
 
             is MovieUiItem.DateSeparatorItem ->

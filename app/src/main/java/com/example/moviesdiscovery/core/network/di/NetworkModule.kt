@@ -59,7 +59,7 @@ val coreNetworkModule = module {
                         ?: (exception as? ServerResponseException)
                         ?: return@handleResponseExceptionWithRequest
                     val exceptionResponse = clientException.response.body<ApiErrorDto>()
-                    throw ApiErrorException(exceptionResponse.message)
+                    throw ApiErrorException(exceptionResponse.message, exceptionResponse.code)
                 }
             }
         }

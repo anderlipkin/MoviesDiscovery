@@ -1,7 +1,6 @@
 package com.example.moviesdiscovery.features.movies.ui.list
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,12 +27,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.moviesdiscovery.R
 import com.example.moviesdiscovery.core.data.paging.PagingLoadState
 import com.example.moviesdiscovery.core.ui.ScreenPreview
-import com.example.moviesdiscovery.core.ui.component.ErrorState
+import com.example.moviesdiscovery.core.ui.component.ErrorWithRetryButton
+import com.example.moviesdiscovery.core.ui.component.LoadingScreen
 import com.example.moviesdiscovery.core.ui.component.RetryButton
 import com.example.moviesdiscovery.core.ui.effect.collectAsEffect
 import com.example.moviesdiscovery.core.ui.model.UiStringValue
 import com.example.moviesdiscovery.core.ui.util.showToast
 import com.example.moviesdiscovery.features.movies.domain.Movie
+import com.example.moviesdiscovery.features.movies.ui.component.MoviesContent
 import com.example.moviesdiscovery.features.movies.ui.component.movieItems
 import com.example.moviesdiscovery.features.movies.ui.component.onPrefetchDistanceReached
 import com.example.moviesdiscovery.features.movies.ui.component.scrollToBottomOnAppendVisible
@@ -88,7 +89,7 @@ fun MoviesScreen(
 }
 
 @Composable
-fun MoviesCachedContent(
+private fun MoviesCachedContent(
     cachedMovies: List<MovieUiItem>,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
@@ -97,36 +98,12 @@ fun MoviesCachedContent(
     when {
         cachedMovies.isEmpty() -> NoInternetState(onRetryClick = onRetryClick)
         else -> {
-            MoviesCachedListContent(
+            MoviesContent(
                 movieItems = cachedMovies,
                 onItemClick = onItemClick,
                 onFavoriteChange = onFavoriteChange,
             )
         }
-    }
-}
-
-@Composable
-private fun MoviesCachedListContent(
-    movieItems: List<MovieUiItem>,
-    onItemClick: (Int) -> Unit,
-    onFavoriteChange: (Int, Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        // TODO maybe need to adding in tabRow
-//        item {
-//            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.safeDrawing))
-//        }
-        movieItems(movieItems, onItemClick, onFavoriteChange)
-        // TODO check after complete HomeScreen
-//        item {
-//            Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.safeDrawing))
-//        }
     }
 }
 
@@ -143,7 +120,7 @@ private fun MoviesPaginationContent(
         pagingState.items.isEmpty() -> {
             val errorMessage = pagingState.loadStates.refresh.errorMessage
             if (errorMessage != null) {
-                ErrorState(
+                ErrorWithRetryButton(
                     title = errorMessage.asString(),
                     onRetryClick = onRetryClick,
                     modifier = Modifier
@@ -205,7 +182,7 @@ private fun MoviesPaginationListContent(
 
 @Composable
 private fun NoInternetState(onRetryClick: () -> Unit) {
-    ErrorState(
+    ErrorWithRetryButton(
         title = stringResource(R.string.error_no_internet_connection),
         subTitle = stringResource(R.string.error_no_internet_connection_description),
         onRetryClick = onRetryClick,
@@ -217,7 +194,7 @@ private fun NoInternetState(onRetryClick: () -> Unit) {
 
 @Composable
 private fun EmptyState(onRetryClick: () -> Unit) {
-    ErrorState(
+    ErrorWithRetryButton(
         title = stringResource(R.string.error_no_found_movies_title),
         subTitle = stringResource(R.string.try_again_later),
         onRetryClick = onRetryClick,
@@ -225,16 +202,6 @@ private fun EmptyState(onRetryClick: () -> Unit) {
             .fillMaxSize()
             .wrapContentSize()
     )
-}
-
-@Composable
-private fun LoadingScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator()
-    }
 }
 
 @Composable

@@ -6,7 +6,6 @@ import com.example.moviesdiscovery.features.movies.data.database.dao.FavoriteMov
 import com.example.moviesdiscovery.features.movies.data.database.dao.MovieDao
 import com.example.moviesdiscovery.features.movies.data.database.entity.MovieEntity
 import com.example.moviesdiscovery.features.movies.data.database.entity.asDomain
-import com.example.moviesdiscovery.features.movies.data.database.entity.asFavoriteMovieEntity
 import com.example.moviesdiscovery.features.movies.data.remote.MoviePageContext
 import com.example.moviesdiscovery.features.movies.data.remote.MoviePagingDataSource
 import com.example.moviesdiscovery.features.movies.domain.Movie
@@ -79,18 +78,7 @@ class MovieRepository(
             }
     }
 
-    fun getFavoriteMovieIdsFlow(): Flow<List<Int>> =
+    private fun getFavoriteMovieIdsFlow(): Flow<List<Int>> =
         favoriteMovieDao.getMovieIdsFlow().distinctUntilChanged()
-
-    suspend fun updateFavoriteMovie(id: Int, isFavorite: Boolean) {
-        if (isFavorite) {
-            val movie = movieDao.getMovieById(id)
-            movie?.let { favoriteMovie ->
-                favoriteMovieDao.insert(favoriteMovie.asFavoriteMovieEntity())
-            }
-        } else {
-            favoriteMovieDao.deleteMovieById(id)
-        }
-    }
 
 }

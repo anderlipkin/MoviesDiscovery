@@ -16,11 +16,11 @@ import com.example.moviesdiscovery.R
 import com.example.moviesdiscovery.core.ui.theme.MoviesDiscoveryTheme
 
 @Composable
-fun ErrorState(
+fun ErrorWithActionButton(
     title: String,
-    onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
-    subTitle: String? = null
+    subTitle: String? = null,
+    button: @Composable () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -37,6 +37,22 @@ fun ErrorState(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        button()
+    }
+}
+
+@Composable
+fun ErrorWithRetryButton(
+    title: String,
+    onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    subTitle: String? = null,
+) {
+    ErrorWithActionButton(
+        title = title,
+        modifier = modifier,
+        subTitle = subTitle,
+    ) {
         RetryButton(
             onClick = onRetryClick,
             modifier = Modifier.padding(top = 8.dp)
@@ -46,9 +62,9 @@ fun ErrorState(
 
 @Preview(showBackground = true)
 @Composable
-private fun ErrorStatePreview() {
+private fun ErrorWithRetryButtonPreview() {
     MoviesDiscoveryTheme {
-        ErrorState(
+        ErrorWithRetryButton(
             title = stringResource(R.string.error_something_went_wrong),
             subTitle = stringResource(R.string.try_again_later),
             onRetryClick = {},

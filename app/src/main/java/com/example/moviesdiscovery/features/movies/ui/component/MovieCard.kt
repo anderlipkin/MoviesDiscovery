@@ -2,7 +2,6 @@ package com.example.moviesdiscovery.features.movies.ui.component
 
 import android.content.Context
 import android.content.Intent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,9 +29,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil3.compose.rememberAsyncImagePainter
-import coil3.compose.rememberConstraintsSizeResolver
+import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.example.moviesdiscovery.R
 import com.example.moviesdiscovery.core.ui.placeholderInPreview
 import com.example.moviesdiscovery.core.ui.theme.MoviesDiscoveryTheme
@@ -105,21 +104,15 @@ internal fun MovieCard(
 
 @Composable
 private fun ThumbnailPoster(imageUrl: String, modifier: Modifier = Modifier) {
-    val sizeResolver = rememberConstraintsSizeResolver()
-    val imagePainter = rememberAsyncImagePainter(
+    AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(imageUrl)
-            .size(sizeResolver)
+            .crossfade(true)
             .build(),
-        error = placeholderInPreview {
-            rememberVectorPainter(Icons.Filled.Movie)
-        }
-    )
-    Image(
-        painter = imagePainter,
+        error = placeholderInPreview { rememberVectorPainter(Icons.Filled.Movie) },
         contentDescription = null,
         contentScale = ContentScale.Crop,
-        modifier = modifier.then(sizeResolver)
+        modifier = modifier
     )
 }
 

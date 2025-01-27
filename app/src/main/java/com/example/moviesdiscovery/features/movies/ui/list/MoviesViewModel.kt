@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.moviesdiscovery.core.data.paging.PagingLoadState
 import com.example.moviesdiscovery.core.data.paging.PagingLoadStates
 import com.example.moviesdiscovery.core.data.util.ConnectivityNetworkMonitor
+import com.example.moviesdiscovery.features.movies.data.FavoriteMoviesRepository
 import com.example.moviesdiscovery.features.movies.data.MovieRepository
 import com.example.moviesdiscovery.features.movies.domain.Movie
 import com.example.moviesdiscovery.features.movies.domain.mergeFavorites
@@ -34,6 +35,7 @@ private const val OFFLINE_CACHED_SIZE = 10
 
 class MoviesViewModel(
     private val movieRepository: MovieRepository,
+    private val favoritesRepository: FavoriteMoviesRepository,
     connectivityNetworkMonitor: ConnectivityNetworkMonitor
 ) : ViewModel() {
 
@@ -70,7 +72,7 @@ class MoviesViewModel(
     private val pagingLoadStates: PagingLoadStates
         get() = pagingDataFetcher.loadStates.value
 
-    private val favoriteIdsFlow = movieRepository.getFavoriteMovieIdsFlow().map { it.toSet() }
+    private val favoriteIdsFlow = favoritesRepository.getMovieIdsFlow().map { it.toSet() }
     private val pagingMoviesFlow =
         combine(pagingDataFetcher.items, favoriteIdsFlow) { movies, favoriteIds ->
             movies.mergeFavorites(favoriteIds).asUiData()
@@ -141,7 +143,7 @@ class MoviesViewModel(
 
     fun onFavoriteChange(id: Int, isFavorite: Boolean) {
         viewModelScope.launch {
-            movieRepository.updateFavoriteMovie(id, isFavorite)
+            favoritesRepository.updateFavoriteMovie(id, isFavorite)
         }
     }
 

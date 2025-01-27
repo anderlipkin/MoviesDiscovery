@@ -1,6 +1,5 @@
 package com.example.moviesdiscovery.features.movies.domain
 
-import com.example.moviesdiscovery.features.movies.domain.MovieSortBy.SortOrder
 import kotlinx.datetime.LocalDate
 
 data class Movie(
@@ -25,25 +24,5 @@ fun List<Movie>.mergeFavorites(favoriteIds: Set<Int>): List<Movie> {
 
 fun Sequence<Movie>.sortMovies(sortList: List<MovieSortBy>): Sequence<Movie> {
     if (sortList.isEmpty()) return this
-
-    val comparator = sortList.map { sortBy ->
-        when (sortBy) {
-            is MovieSortBy.PrimaryReleaseDate -> {
-                when (sortBy.sortOrder) {
-                    SortOrder.Asc -> compareBy<Movie> { it.releaseDate }
-                    SortOrder.Desc -> compareByDescending<Movie> { it.releaseDate }
-                }
-            }
-
-            is MovieSortBy.VoteAverage -> {
-                when (sortBy.sortOrder) {
-                    SortOrder.Asc -> compareBy<Movie> { it.voteAverage }
-                    SortOrder.Desc -> compareByDescending<Movie> { it.voteAverage }
-                }
-            }
-        }
-    }.reduce { acc, comparator ->
-        acc.then(comparator)
-    }
-    return sortedWith(comparator)
+    return sortedWith(sortList.asComparator())
 }

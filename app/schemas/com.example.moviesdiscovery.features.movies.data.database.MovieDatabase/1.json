@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "698c15dc351cd2a3bb2892ae703dfd9c",
+    "identityHash": "13f2f8678f08e9dbaeb442ffb8ef141a",
     "entities": [
       {
         "tableName": "movies",
@@ -103,38 +103,12 @@
         },
         "indices": [],
         "foreignKeys": []
-      },
-      {
-        "tableName": "movie_remote_keys",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`movie_query` TEXT NOT NULL, `next_page` INTEGER, PRIMARY KEY(`movie_query`))",
-        "fields": [
-          {
-            "fieldPath": "movieQuery",
-            "columnName": "movie_query",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "nextPage",
-            "columnName": "next_page",
-            "affinity": "INTEGER",
-            "notNull": false
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "movie_query"
-          ]
-        },
-        "indices": [],
-        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '698c15dc351cd2a3bb2892ae703dfd9c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '13f2f8678f08e9dbaeb442ffb8ef141a')"
     ]
   }
 }

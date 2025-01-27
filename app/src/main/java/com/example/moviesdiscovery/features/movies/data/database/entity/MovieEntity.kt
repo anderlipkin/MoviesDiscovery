@@ -41,3 +41,13 @@ fun MovieEntity.asDomain() =
         releaseDate = releaseDate,
         favorite = false
     )
+
+fun MovieEntity.asFavoriteMovieEntity() =
+    FavoriteMovieEntity(
+        id = id,
+        title = title,
+        overview = overview,
+        voteAverage = voteAverage,
+        posterPath = posterPath,
+        releaseDate = releaseDate
+    )

@@ -15,7 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.moviesdiscovery.R
 import com.example.moviesdiscovery.core.ui.effect.collectAsEffect
-import com.example.moviesdiscovery.features.movies.ui.list.MoviesScreen
+import com.example.moviesdiscovery.features.movies.ui.favorite.FavoriteMoviesScreen
 import org.koin.androidx.compose.KoinAndroidContext
 
 @Composable
@@ -27,12 +27,19 @@ fun MoviesDiscoveryApp(appState: MoviesAppState, modifier: Modifier = Modifier) 
             modifier = modifier,
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { innerPadding ->
-            MoviesScreen(
+            FavoriteMoviesScreen(
+                onGoToLibraryClick = {},
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
                     .consumeWindowInsets(innerPadding)
             )
+//            MoviesScreen(
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .padding(innerPadding)
+//                    .consumeWindowInsets(innerPadding)
+//            )
         }
         appState.snackbarEvent.collectAsEffect {
             snackbarHostState.showSnackbar(it)

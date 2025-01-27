@@ -6,7 +6,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class MovieResponseDto(
+data class MoviesResponseDto(
     @SerialName("results")
     val results: List<MovieDto>
 )
@@ -27,8 +27,7 @@ data class MovieDto(
     val releaseDate: LocalDate
 )
 
-// TODO remove favorite
-fun MovieDto.asDomain(favorite: Boolean) =
+fun MovieDto.asDomain() =
     Movie(
         id = id,
         title = title,
@@ -36,5 +35,5 @@ fun MovieDto.asDomain(favorite: Boolean) =
         voteAverage = voteAverage,
         posterPath = posterPath,
         releaseDate = releaseDate,
-        favorite = favorite
+        favorite = false
     )
