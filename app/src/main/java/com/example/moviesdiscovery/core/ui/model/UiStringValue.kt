@@ -3,12 +3,14 @@ package com.example.moviesdiscovery.core.ui.model
 import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.res.stringResource
 
 sealed class UiStringValue {
     data class DynamicString(val value: String) : UiStringValue()
 
+    @Immutable
     class StringResource(
         @StringRes val resId: Int,
         val args: List<Any> = emptyList()

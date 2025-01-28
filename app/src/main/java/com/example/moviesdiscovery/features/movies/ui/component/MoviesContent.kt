@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import com.example.moviesdiscovery.core.ui.model.LazyListScrollPosition
 import com.example.moviesdiscovery.features.movies.ui.model.MovieUiItem
 
-// TODO lazystate
 @Composable
 fun MoviesContent(
     movieItems: List<MovieUiItem>,
@@ -32,7 +31,7 @@ fun MoviesContent(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         state = lazyListState,
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         movieItems(movieItems, onItemClick, onFavoriteChange)

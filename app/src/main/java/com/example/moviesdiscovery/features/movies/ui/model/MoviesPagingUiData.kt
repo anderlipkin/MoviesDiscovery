@@ -7,7 +7,7 @@ import com.example.moviesdiscovery.core.data.paging.PagingLoadStates
 import com.example.moviesdiscovery.core.ui.model.UiStringValue
 
 @Immutable
-data class MoviesPagingUiState(
+data class MoviesPagingUiData(
     val items: List<MovieUiItem>,
     val loadStates: PagingLoadUiStates,
     val prefetchDistance: Int
@@ -29,15 +29,18 @@ data class PagingLoadUiState(
 )
 
 fun PagingLoadStates.asUiStates(isOnline: Boolean): PagingLoadUiStates {
-    val errorMessage = if (hasError) {
+    val refreshErrorMessage = (refresh as? PagingLoadState.Error)?.let {
         UiStringValue.StringResource(
             resId = if (isOnline) R.string.error_something_went_wrong else R.string.error_no_internet_connection
         )
-    } else {
-        null
+    }
+    val appendErrorMessage = (append as? PagingLoadState.Error)?.let {
+        UiStringValue.StringResource(
+            resId = if (isOnline) R.string.error_something_went_wrong else R.string.error_no_internet_connection
+        )
     }
     return PagingLoadUiStates(
-        refresh = PagingLoadUiState(state = refresh, errorMessage = errorMessage),
-        append = PagingLoadUiState(state = append, errorMessage = errorMessage)
+        refresh = PagingLoadUiState(state = refresh, errorMessage = refreshErrorMessage),
+        append = PagingLoadUiState(state = append, errorMessage = appendErrorMessage)
     )
 }

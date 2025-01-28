@@ -28,17 +28,19 @@ fun FavoriteMoviesScreen(
 
     when (val uiState = uiState) {
         FavoriteMoviesUiState.Loading -> LoadingScreen()
-        is FavoriteMoviesUiState.Success -> if (uiState.movies.isEmpty()) {
-            EmptyState(onGoToLibraryClick = onGoToLibraryClick)
-        } else {
-            MoviesContent(
-                movieItems = uiState.movies,
-                scrollPosition = scrollPosition,
-                onItemClick = viewModel::onItemClick,
-                onFavoriteChange = viewModel::onFavoriteChange,
-                onScrollPositionSave = viewModel::saveScrollPosition,
-                modifier = modifier
-            )
+        is FavoriteMoviesUiState.Success -> {
+            if (uiState.movies.isEmpty()) {
+                EmptyState(onGoToLibraryClick = onGoToLibraryClick)
+            } else {
+                MoviesContent(
+                    movieItems = uiState.movies,
+                    scrollPosition = scrollPosition,
+                    onItemClick = viewModel::onItemClick,
+                    onFavoriteChange = viewModel::onFavoriteChange,
+                    onScrollPositionSave = viewModel::saveScrollPosition,
+                    modifier = modifier
+                )
+            }
         }
     }
 }

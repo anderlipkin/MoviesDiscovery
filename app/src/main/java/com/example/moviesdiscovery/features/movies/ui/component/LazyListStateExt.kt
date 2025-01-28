@@ -8,7 +8,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import com.example.moviesdiscovery.core.data.paging.PagingLoadState
 import com.example.moviesdiscovery.core.ui.model.LazyListScrollPosition
 
 @Composable
@@ -26,22 +25,6 @@ fun LazyListState.onPrefetchDistanceReached(distance: Int, loadNextPage: () -> U
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore) {
             currentLoadNextPage()
-        }
-    }
-}
-
-@Composable
-fun LazyListState.scrollToBottomOnAppendVisible(appendLoadState: PagingLoadState) {
-    LaunchedEffect(appendLoadState) {
-        val isAppendVisible =
-            appendLoadState is PagingLoadState.Loading || appendLoadState is PagingLoadState.Error
-        if (isAppendVisible) {
-            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull() ?: return@LaunchedEffect
-            val lastIndex = layoutInfo.totalItemsCount - 1
-            val isLastItemVisible = lastVisibleItem.index == lastIndex
-            if (isLastItemVisible) {
-                scrollToItem(lastIndex)
-            }
         }
     }
 }

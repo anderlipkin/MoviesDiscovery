@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -43,14 +43,13 @@ import com.example.moviesdiscovery.features.movies.ui.component.MoviesContent
 import com.example.moviesdiscovery.features.movies.ui.component.movieItems
 import com.example.moviesdiscovery.features.movies.ui.component.onPrefetchDistanceReached
 import com.example.moviesdiscovery.features.movies.ui.component.saveScrollPositionOnDispose
-import com.example.moviesdiscovery.features.movies.ui.component.scrollToBottomOnAppendVisible
-import com.example.moviesdiscovery.features.movies.ui.model.MovieUiItem
-import com.example.moviesdiscovery.features.movies.ui.model.MoviesPagingUiState
+import com.example.moviesdiscovery.features.movies.ui.model.MoviesPagingUiData
 import com.example.moviesdiscovery.features.movies.ui.model.PagingLoadUiState
 import com.example.moviesdiscovery.features.movies.ui.model.PagingLoadUiStates
 import com.example.moviesdiscovery.features.movies.ui.model.asUiData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
+import kotlinx.io.IOException
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,39 +59,37 @@ fun MoviesScreen(
     viewModel: MoviesViewModel = koinViewModel()
 ) {
     val uiData by viewModel.uiData.collectAsStateWithLifecycle()
-    val cachedMovies by viewModel.cachedMovies.collectAsStateWithLifecycle()
-    val pagingState by viewModel.pagingUiState.collectAsStateWithLifecycle()
+    val listUiState by viewModel.listUiState.collectAsStateWithLifecycle()
     viewModel.isOnlineFlow.collectAsStateWithLifecycle()
-    PullToRefreshBox(
-        isRefreshing = uiData.isRefreshingPull,
-        onRefresh = viewModel::onPullToRefresh,
-        modifier = modifier
-    ) {
-        val uiState = uiData.state
-        when {
-            uiData.isLoadingOnFullScreen -> LoadingScreen()
-            uiState is MoviesUiState.OfflineCachedContent -> {
-                MoviesCachedContent(
-                    cachedMovies = cachedMovies,
-                    scrollPosition = uiState.scrollPosition,
-                    onItemClick = viewModel::onItemClick,
-                    onFavoriteChange = viewModel::onFavoriteChange,
-                    onRetryClick = viewModel::refresh,
-                    onScrollPositionSave = viewModel::saveScrollPosition
-                )
-            }
 
-            uiState is MoviesUiState.PagingContent -> {
-                MoviesPaginationContent(
-                    pagingState = pagingState,
-                    scrollPosition = uiState.scrollPosition,
-                    onItemClick = viewModel::onItemClick,
-                    onFavoriteChange = viewModel::onFavoriteChange,
-                    onRetryClick = viewModel::refresh,
-                    onAppendRetryClick = viewModel::onAppendRetryClick,
-                    onLoadNextPage = viewModel::onLoadNextPage,
-                    onScrollPositionSave = viewModel::saveScrollPosition
-                )
+    if (uiData.isFullScreenLoading) {
+        LoadingScreen()
+    } else {
+        PullToRefreshBox(
+            isRefreshing = uiData.isRefreshingPull,
+            onRefresh = viewModel::onPullToRefresh,
+            modifier = modifier
+        ) {
+            when (val listUiState = listUiState) {
+                is MoviesListUiState.OfflineCached ->
+                    MoviesCachedContent(
+                        listUiState = listUiState,
+                        onItemClick = viewModel::onItemClick,
+                        onFavoriteChange = viewModel::onFavoriteChange,
+                        onRetryClick = viewModel::refresh,
+                        onScrollPositionSave = viewModel::saveScrollPosition
+                    )
+
+                is MoviesListUiState.Paging ->
+                    MoviesPaginationContent(
+                        pagingState = listUiState,
+                        onItemClick = viewModel::onItemClick,
+                        onFavoriteChange = viewModel::onFavoriteChange,
+                        onRetryClick = viewModel::refresh,
+                        onAppendRetryClick = viewModel::onAppendRetryClick,
+                        onLoadNextPage = viewModel::onLoadNextPage,
+                        onScrollPositionSave = viewModel::saveScrollPosition
+                    )
             }
         }
     }
@@ -101,31 +98,28 @@ fun MoviesScreen(
 
 @Composable
 private fun MoviesCachedContent(
-    cachedMovies: List<MovieUiItem>,
-    scrollPosition: LazyListScrollPosition,
+    listUiState: MoviesListUiState.OfflineCached,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
     onRetryClick: () -> Unit,
     onScrollPositionSave: (LazyListScrollPosition) -> Unit
 ) {
-    when {
-        cachedMovies.isEmpty() -> NoInternetState(onRetryClick = onRetryClick)
-        else -> {
-            MoviesContent(
-                movieItems = cachedMovies,
-                scrollPosition = scrollPosition,
-                onItemClick = onItemClick,
-                onFavoriteChange = onFavoriteChange,
-                onScrollPositionSave = onScrollPositionSave
-            )
-        }
+    if (listUiState.movies.isEmpty()) {
+        NoInternetState(onRetryClick = onRetryClick)
+    } else {
+        MoviesContent(
+            movieItems = listUiState.movies,
+            scrollPosition = listUiState.scrollPosition,
+            onItemClick = onItemClick,
+            onFavoriteChange = onFavoriteChange,
+            onScrollPositionSave = onScrollPositionSave
+        )
     }
 }
 
 @Composable
 private fun MoviesPaginationContent(
-    pagingState: MoviesPagingUiState,
-    scrollPosition: LazyListScrollPosition,
+    pagingState: MoviesListUiState.Paging,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
     onRetryClick: () -> Unit,
@@ -133,40 +127,42 @@ private fun MoviesPaginationContent(
     onLoadNextPage: () -> Unit,
     onScrollPositionSave: (LazyListScrollPosition) -> Unit
 ) {
-    when {
-        pagingState.items.isEmpty() -> {
-            val errorMessage = pagingState.loadStates.refresh.errorMessage
-            if (errorMessage != null) {
-                ErrorWithRetryButton(
-                    title = errorMessage.asString(),
-                    onRetryClick = onRetryClick,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .wrapContentSize()
-                )
-            } else {
-                EmptyState(onRetryClick = onRetryClick)
-            }
+    if (pagingState.data.items.isEmpty()) {
+        val errorMessage = pagingState.data.loadStates.refresh.errorMessage
+        if (errorMessage != null) {
+            ErrorState(errorMessage, onRetryClick)
+        } else {
+            EmptyState(onRetryClick = onRetryClick)
         }
-
-        else -> {
-            MoviesPaginationListContent(
-                pagingState = pagingState,
-                scrollPosition = scrollPosition,
-                onItemClick = onItemClick,
-                onFavoriteChange = onFavoriteChange,
-                onAppendRetryClick = onAppendRetryClick,
-                onLoadNextPage = onLoadNextPage,
-                onScrollPositionSave = onScrollPositionSave
-            )
-        }
+    } else {
+        MoviesPaginationListContent(
+            pagingState = pagingState,
+            onItemClick = onItemClick,
+            onFavoriteChange = onFavoriteChange,
+            onAppendRetryClick = onAppendRetryClick,
+            onLoadNextPage = onLoadNextPage,
+            onScrollPositionSave = onScrollPositionSave
+        )
     }
 }
 
 @Composable
+private fun ErrorState(
+    errorMessage: UiStringValue,
+    onRetryClick: () -> Unit
+) {
+    ErrorWithRetryButton(
+        title = errorMessage.asString(),
+        onRetryClick = onRetryClick,
+        modifier = Modifier
+            .fillMaxSize()
+            .wrapContentSize()
+    )
+}
+
+@Composable
 private fun MoviesPaginationListContent(
-    pagingState: MoviesPagingUiState,
-    scrollPosition: LazyListScrollPosition,
+    pagingState: MoviesListUiState.Paging,
     onItemClick: (Int) -> Unit,
     onFavoriteChange: (Int, Boolean) -> Unit,
     onAppendRetryClick: () -> Unit,
@@ -174,7 +170,9 @@ private fun MoviesPaginationListContent(
     onScrollPositionSave: (LazyListScrollPosition) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val appendLoadState = pagingState.loadStates.append
+    val pagingData = pagingState.data
+    val appendLoadState = pagingData.loadStates.append
+    val scrollPosition = pagingState.scrollPosition
     val lazyListState = rememberLazyListState(
         initialFirstVisibleItemIndex = scrollPosition.firstVisibleItemIndex,
         initialFirstVisibleItemScrollOffset = scrollPosition.firstVisibleItemScrollOffset
@@ -182,13 +180,13 @@ private fun MoviesPaginationListContent(
     LazyColumn(
         state = lazyListState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        movieItems(pagingState.items, onItemClick, onFavoriteChange)
+        movieItems(pagingData.items, onItemClick, onFavoriteChange)
         paginationFooterItem(
             appendLoadState = appendLoadState.state,
-            progress = { PagingProgressIndicator() },
+            progress = { CircularProgressIndicator() },
             error = {
                 PaginationAppendErrorState(
                     appendLoadState.errorMessage,
@@ -199,9 +197,8 @@ private fun MoviesPaginationListContent(
     }
 
     lazyListState.saveScrollPositionOnDispose(onScrollPositionSave)
-    lazyListState.scrollToBottomOnAppendVisible(appendLoadState.state)
-    if (pagingState.appendPrefetchEnabled) {
-        lazyListState.onPrefetchDistanceReached(pagingState.prefetchDistance, onLoadNextPage)
+    if (pagingData.appendPrefetchEnabled) {
+        lazyListState.onPrefetchDistanceReached(pagingData.prefetchDistance, onLoadNextPage)
     }
 }
 
@@ -230,29 +227,14 @@ private fun EmptyState(onRetryClick: () -> Unit) {
 }
 
 @Composable
-private fun PaginationAppendErrorState(errorMessage: UiStringValue?, onRetryClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .padding(top = 4.dp)
-            .fillMaxWidth()
-    ) {
-        Text(text = errorMessage?.asString() ?: stringResource(R.string.error_something_went_wrong))
-        RetryButton(onClick = onRetryClick)
-    }
+private fun ColumnScope.PaginationAppendErrorState(
+    errorMessage: UiStringValue?,
+    onRetryClick: () -> Unit
+) {
+    Text(text = errorMessage?.asString() ?: stringResource(R.string.error_something_went_wrong))
+    RetryButton(onClick = onRetryClick)
 }
 
-@Composable
-private fun PagingProgressIndicator() {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .padding(top = 4.dp)
-            .fillMaxWidth()
-    ) {
-        CircularProgressIndicator()
-    }
-}
 
 @Composable
 private fun MoviesUiEffect(uiEvents: Flow<MoviesUiEvent>) {
@@ -268,11 +250,16 @@ private fun MoviesUiEffect(uiEvents: Flow<MoviesUiEvent>) {
 
 private fun LazyListScope.paginationFooterItem(
     appendLoadState: PagingLoadState,
-    progress: @Composable ColumnScope.() -> Unit,
-    error: @Composable ColumnScope.() -> Unit
+    progress: @Composable (ColumnScope.() -> Unit),
+    error: @Composable (ColumnScope.() -> Unit)
 ) {
-    item {
-        Column {
+    item(contentType = "paginationFooterItem") {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 72.dp)
+        ) {
             when (appendLoadState) {
                 is PagingLoadState.Loading -> progress.invoke(this)
                 is PagingLoadState.Error -> error.invoke(this)
@@ -298,18 +285,23 @@ private fun MoviesContentPreview() {
             favorite = false
         )
     }.asUiData()
-    val pagingState = MoviesPagingUiState(
-        items = movies,
-        loadStates = PagingLoadUiStates(
-            refresh = PagingLoadUiState(PagingLoadState.NotLoading.Incomplete),
-            append = PagingLoadUiState(PagingLoadState.NotLoading.Incomplete)
+    val pagingState = MoviesListUiState.Paging(
+        data = MoviesPagingUiData(
+            items = movies,
+            loadStates = PagingLoadUiStates(
+                refresh = PagingLoadUiState(PagingLoadState.NotLoading.Incomplete),
+                append = PagingLoadUiState(
+                    state = PagingLoadState.Error(IOException()),
+                    errorMessage = UiStringValue.StringResource(R.string.error_something_went_wrong)
+                )
+            ),
+            prefetchDistance = 0
         ),
-        prefetchDistance = 0
+        scrollPosition = LazyListScrollPosition()
     )
     ScreenPreview {
         MoviesPaginationListContent(
             pagingState = pagingState,
-            scrollPosition = LazyListScrollPosition(),
             onFavoriteChange = { _, _ -> },
             onItemClick = {},
             onAppendRetryClick = {},
